@@ -1,0 +1,6 @@
+composer:
+    drupal8:
+      repositories:
+        drupal:
+          type: composer
+          url: https://packages.drupal.org/8
