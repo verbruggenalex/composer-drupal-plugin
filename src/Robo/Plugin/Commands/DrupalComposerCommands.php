@@ -78,9 +78,9 @@ class DrupalComposerCommands extends AbstractCommands
         $this->tasks[] = $this->taskExecStack()
           ->stopOnFail()
           ->executable($this->composer)
-          ->exec('require composer/installers drupal/core --no-update --quiet')
-          ->exec('require drupal/core-dev --dev --no-update --quiet')
-          ->exec('update --quiet');
+          ->exec('require composer/installers drupal/core drupal/core-composer-scaffold --no-update --quiet')
+          ->exec('require drupal/core-dev --dev --no-update --quiet');
+        //   ->exec('install');
     }
 
     protected function transformComposerJson() {
