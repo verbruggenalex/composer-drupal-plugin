@@ -22,13 +22,14 @@ use Composer\Installer\PackageEvents;
 use Composer\IO\IOInterface;
 use Composer\Package\RootPackageInterface;
 use Composer\Plugin\PluginInterface;
+use Composer\Plugin\Capable;
 use Composer\Script\Event as ScriptEvent;
 use Composer\Script\ScriptEvents;
 
 /**
  * Composer for extra functionality in Toolkit.
  */
-class Plugin implements PluginInterface, EventSubscriberInterface
+class Plugin implements PluginInterface, EventSubscriberInterface, Capable
 {
 
     /**
@@ -53,6 +54,13 @@ class Plugin implements PluginInterface, EventSubscriberInterface
     {
         $this->composer = $composer;
         $this->state = new PluginState($this->composer);
+    }
+
+    public function getCapabilities()
+    {
+        return array(
+            'Composer\Plugin\Capability\CommandProvider' => 'VerbruggenAlex\ComposerDrupalPlugin\CommandProvider',
+        );
     }
 
     /**
