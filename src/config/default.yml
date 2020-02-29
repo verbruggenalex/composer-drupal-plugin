@@ -15,9 +15,11 @@ composer:
       composer-exit-on-patch-failure: true
       patchLevel:
         drupal/core: '-p2'
-      drupal-scaffold:
-        locations:
-          web-root: 'web/'
+        drupal-scaffold:
+          allowed-packages:
+            - drupal/core
+          locations:
+            web-root: './web'
       installer-paths:
         web/core:
           - type:drupal-core
@@ -45,3 +47,27 @@ composer:
           - type:drupal-console-language
         config/{$name}/sync:
           - type:drupal-config
+
+repositories:
+  drupal/*:
+    type: composer
+    url: https://packages.drupal.org/8
+packages:
+  composer/installers:
+    extra: installer-paths
+  drupal/core-composer-scaffold:
+    extra: drupal-scaffold
+  drupal/core:
+    extra:
+      installer-paths:
+        web/core:
+          - type:drupal-core
+      drupal-scaffold:
+        locations:
+          web-root: web/
+
+distributions:
+  drupal:
+    - drupal/core
+    - composer/installers
+    - drupal/core-composer-scaffold

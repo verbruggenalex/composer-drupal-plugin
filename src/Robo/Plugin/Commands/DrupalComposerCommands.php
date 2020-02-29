@@ -9,10 +9,16 @@ use Robo\Common\ResourceExistenceChecker;
 use Robo\Contract\VerbosityThresholdInterface;
 use Symfony\Component\Console\Event\ConsoleCommandEvent;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Question\Question;
+use Symfony\Component\Process\ExecutableFinder;
+use Symfony\Component\Process\Process;
 
 class DrupalComposerCommands extends AbstractCommands
 {
     use ResourceExistenceChecker;
+
+    /** @var array */
+    private $gitConfig;
 
 	/** @var array $tasks */
     protected $tasks = [];
@@ -42,6 +48,205 @@ class DrupalComposerCommands extends AbstractCommands
      * @return \Robo\Collection\CollectionBuilder
      *   Collection builder.
      *
+     * @command drupal:init
+     *
+     * @option name         The project name.
+     * @option description  The description of the project.
+     * @option author       The author of the project.
+     * @option drupal-root  The root directory for Drupal.
+     */
+    public function drupalInit(array $options = [
+        'name' =>  InputOption::VALUE_OPTIONAL,
+        'description' => InputOption::VALUE_OPTIONAL,
+        'author' => InputOption::VALUE_OPTIONAL,
+        'drupal-root' => InputOption::VALUE_OPTIONAL,
+    ])
+    {
+        $this->setName();
+        $this->setDescription();
+        $this->setAuthor();
+        
+        var_dump($this->input()->getOptions());
+    }
+
+    protected function setAuthor() {
+        $git = $this->getGitConfig();
+        if (null === $author = $this->input()->getOption('author')) {
+            if (!empty($_SERVER['COMPOSER_DEFAULT_AUTHOR'])) {
+                $author_name = $_SERVER['COMPOSER_DEFAULT_AUTHOR'];
+            } elseif (isset($git['user.name'])) {
+                $author_name = $git['user.name'];
+            }
+
+            if (!empty($_SERVER['COMPOSER_DEFAULT_EMAIL'])) {
+                $author_email = $_SERVER['COMPOSER_DEFAULT_EMAIL'];
+            } elseif (isset($git['user.email'])) {
+                $author_email = $git['user.email'];
+            }
+
+            if (isset($author_name) && isset($author_email)) {
+                $author = sprintf('%s <%s>', $author_name, $author_email);
+            }
+        }
+
+        $self = $this;
+        $question = new Question('Author [<comment>'.$author.'</comment>, n to skip]: ');
+        $question->setValidator(function ($value) use ($self, $author) {
+                if ($value === 'n' || $value === 'no') {
+                    return;
+                }
+                $value = $value ?: $author;
+                $author = $self->parseAuthorString($value);
+
+                return sprintf('%s <%s>', $author['name'], $author['email']);
+            },
+            null,
+            $author
+        
+        );
+
+        $author = $this->getDialog()->ask($this->input(), $this->output(), $question);
+        $this->input()->setOption('author', $author);
+    }
+
+    /**
+     * @private
+     * @param  string $author
+     * @return array
+     */
+    public function parseAuthorString($author)
+    {
+        if (preg_match('/^(?P<name>[- .,\p{L}\p{N}\p{Mn}\'’"()]+) <(?P<email>.+?)>$/u', $author, $match)) {
+            if ($this->isValidEmail($match['email'])) {
+                return array(
+                    'name' => trim($match['name']),
+                    'email' => $match['email'],
+                );
+            }
+        }
+
+        throw new \InvalidArgumentException(
+            'Invalid author string.  Must be in the format: '.
+            'John Smith <john@example.com>'
+        );
+    }
+
+    protected function isValidEmail($email)
+    {
+        // assume it's valid if we can't validate it
+        if (!function_exists('filter_var')) {
+            return true;
+        }
+
+        // php <5.3.3 has a very broken email validator, so bypass checks
+        if (PHP_VERSION_ID < 50303) {
+            return true;
+        }
+
+        return false !== filter_var($email, FILTER_VALIDATE_EMAIL);
+    }
+
+    protected function getGitConfig()
+    {
+        if (null !== $this->gitConfig) {
+            return $this->gitConfig;
+        }
+
+        $finder = new ExecutableFinder();
+        $gitBin = $finder->find('git');
+
+        // TODO in v3 always call with an array
+        if (method_exists('Symfony\Component\Process\Process', 'fromShellCommandline')) {
+            $cmd = new Process(array($gitBin, 'config', '-l'));
+        } else {
+            $cmd = new Process(sprintf('%s config -l', ProcessExecutor::escape($gitBin)));
+        }
+        $cmd->run();
+
+        if ($cmd->isSuccessful()) {
+            $this->gitConfig = array();
+            preg_match_all('{^([^=]+)=(.*)$}m', $cmd->getOutput(), $matches, PREG_SET_ORDER);
+            foreach ($matches as $match) {
+                $this->gitConfig[$match[1]] = $match[2];
+            }
+
+            return $this->gitConfig;
+        }
+
+        return $this->gitConfig = array();
+    }
+
+    protected function setDescription() {
+        $description = $this->input()->getOption('description') ?: false;
+        $description = $this->getDialog()->ask(
+            $this->input(),
+            $this->output(),
+            new Question('Description [<comment>'.$description.'</comment>]: ',
+            $description)
+        );
+        $this->input()->setOption('description', $description);
+    }
+
+    protected function setName() {
+        $cwd = realpath(".");
+
+        if (!$name = $this->input()->getOption('name')) {
+            $name = basename($cwd);
+            $name = preg_replace('{(?:([a-z])([A-Z])|([A-Z])([A-Z][a-z]))}', '\\1\\3-\\2\\4', $name);
+            $name = strtolower($name);
+            if (!empty($_SERVER['COMPOSER_DEFAULT_VENDOR'])) {
+                $name = $_SERVER['COMPOSER_DEFAULT_VENDOR'] . '/' . $name;
+            } elseif (isset($git['github.user'])) {
+                $name = $git['github.user'] . '/' . $name;
+            } elseif (!empty($_SERVER['USERNAME'])) {
+                $name = $_SERVER['USERNAME'] . '/' . $name;
+            } elseif (!empty($_SERVER['USER'])) {
+                $name = $_SERVER['USER'] . '/' . $name;
+            } elseif (get_current_user()) {
+                $name = get_current_user() . '/' . $name;
+            } else {
+                // package names must be in the format foo/bar
+                $name .= '/' . $name;
+            }
+            $name = strtolower($name);
+        } else {
+            if (!preg_match('{^[a-z0-9_.-]+/[a-z0-9_.-]+$}D', $name)) {
+                throw new \InvalidArgumentException(
+                    'The package name '.$name.' is invalid, it should be lowercase and have a vendor name, a forward slash, and a package name, matching: [a-z0-9_.-]+/[a-z0-9_.-]+'
+                );
+            }
+        }
+
+        $question = new Question('Package name (<vendor>/<name>) [<comment>'.$name.'</comment>]: ');
+        $question->setValidator(function ($value) use ($name) {
+                if (null === $value) {
+                    return $name;
+                }
+
+                if (!preg_match('{^[a-z0-9_.-]+/[a-z0-9_.-]+$}D', $value)) {
+                    throw new \InvalidArgumentException(
+                        'The package name '.$value.' is invalid, it should be lowercase and have a vendor name, a forward slash, and a package name, matching: [a-z0-9_.-]+/[a-z0-9_.-]+'
+                    );
+                }
+
+                return $value;
+            },
+            null,
+            $name
+        );
+        $name = $this->getDialog()->ask($this->input(), $this->output(), $question);
+        $this->input()->setOption('name', $name);
+    }
+
+    /**
+     * Create a Drupal composer.json.
+     *
+     * @param array $options
+     *   Command options.
+     *
+     * @return \Robo\Collection\CollectionBuilder
+     *   Collection builder.
+     *
      * @command composer:create-drupal
      *
      * @option drupal-root  The root directory you wish to have Drupal installed at.
@@ -52,15 +257,23 @@ class DrupalComposerCommands extends AbstractCommands
         'drupal-root' => InputOption::VALUE_OPTIONAL,
     ])
     {
-        $this->setComposerExecutable();
-        $this->transformComposerJson();
-        $this->normalizeComposerJson();
-        $this->composerRequireDrupal();
-        if ($this->tasks !== []) {
-            return $this
-                ->collectionBuilder()
-                ->addTaskList($this->tasks);
+        $distribution = $this->getConfig()->get('distributions.drupal');
+        $json = [];
+        foreach ($distribution as $package) {
+            $json[] = $this->getConfig()->get("packages.$package");
         }
+        // var_dump($json);
+        $result = array_intersect(...$json);
+        var_dump($result);
+        // $this->setComposerExecutable();
+        // $this->transformComposerJson();
+        // $this->normalizeComposerJson();
+        // $this->composerRequireDrupal();
+        // if ($this->tasks !== []) {
+        //     return $this
+        //         ->collectionBuilder()
+        //         ->addTaskList($this->tasks);
+        // }
     }
 
     protected function setComposerExecutable() {
@@ -79,8 +292,8 @@ class DrupalComposerCommands extends AbstractCommands
           ->stopOnFail()
           ->executable($this->composer)
           ->exec('require composer/installers drupal/core drupal/core-composer-scaffold --no-update --quiet')
-          ->exec('require drupal/core-dev --dev --no-update --quiet');
-        //   ->exec('install');
+          ->exec('require drupal/core-dev --dev --no-update --quiet')
+          ->exec('install');
     }
 
     protected function transformComposerJson() {
