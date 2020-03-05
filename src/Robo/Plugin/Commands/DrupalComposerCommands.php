@@ -65,8 +65,17 @@ class DrupalComposerCommands extends AbstractCommands
         $this->setName();
         $this->setDescription();
         $this->setAuthor();
-        
-        var_dump($this->input()->getOptions());
+
+        $composer = [
+            'name' => $this->input()->getOption('name'),
+            'description' => $this->input()->getOption('description'),
+        ];
+        var_dump($composer);
+
+        if (!file_exists('composer.json')) {
+            $json = json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+            file_put_contents('composer.json', $json);
+        }  
     }
 
     protected function setAuthor() {
@@ -257,23 +266,15 @@ class DrupalComposerCommands extends AbstractCommands
         'drupal-root' => InputOption::VALUE_OPTIONAL,
     ])
     {
-        $distribution = $this->getConfig()->get('distributions.drupal');
-        $json = [];
-        foreach ($distribution as $package) {
-            $json[] = $this->getConfig()->get("packages.$package");
+        $this->setComposerExecutable();
+        $this->transformComposerJson();
+        $this->normalizeComposerJson();
+        $this->composerRequireDrupal();
+        if ($this->tasks !== []) {
+            return $this
+                ->collectionBuilder()
+                ->addTaskList($this->tasks);
         }
-        // var_dump($json);
-        $result = array_intersect(...$json);
-        var_dump($result);
-        // $this->setComposerExecutable();
-        // $this->transformComposerJson();
-        // $this->normalizeComposerJson();
-        // $this->composerRequireDrupal();
-        // if ($this->tasks !== []) {
-        //     return $this
-        //         ->collectionBuilder()
-        //         ->addTaskList($this->tasks);
-        // }
     }
 
     protected function setComposerExecutable() {
@@ -292,8 +293,8 @@ class DrupalComposerCommands extends AbstractCommands
           ->stopOnFail()
           ->executable($this->composer)
           ->exec('require composer/installers drupal/core drupal/core-composer-scaffold --no-update --quiet')
-          ->exec('require drupal/core-dev --dev --no-update --quiet')
-          ->exec('install');
+          ->exec('require drupal/core-dev drupal-composer/drupal-security-advisories --dev --no-update --quiet')
+          ->exec('install --ansi');
     }
 
     protected function transformComposerJson() {

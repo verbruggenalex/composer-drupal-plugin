@@ -19,7 +19,7 @@ class Command extends BaseCommand
 {
     protected function configure()
     {
-        $this->setName('custom-plugin-command');
+        $this->setName('drupal-init');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
