@@ -1,3 +1,10 @@
+drupal:
+  root: web
+  sites:
+    default:
+    site1:
+    site2:
+
 composer:
   drupal:
     type: 'project'

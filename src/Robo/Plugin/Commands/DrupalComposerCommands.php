@@ -10,12 +10,14 @@ use Robo\Contract\VerbosityThresholdInterface;
 use Symfony\Component\Console\Event\ConsoleCommandEvent;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Question\Question;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 
 class DrupalComposerCommands extends AbstractCommands
 {
     use ResourceExistenceChecker;
+    use \Boedah\Robo\Task\Drush\loadTasks;
 
     /** @var array */
     private $gitConfig;
@@ -37,6 +39,40 @@ class DrupalComposerCommands extends AbstractCommands
     public function getDefaultConfigurationFile(): string
     {
         return __DIR__ . '/../../../config/default.yml';
+    }
+
+    /**
+     * Generate Drupal folders.
+     *
+     * @param array $options
+     *   Command options.
+     *
+     * @return \Robo\Collection\CollectionBuilder
+     *   Collection builder.
+     *
+     * @command drupal:generate-folders
+     *
+     * @option drupal-root  The root directory for Drupal.
+     */
+    public function drupalGenerateFolders(array $options = [
+        'drupal-root' => InputOption::VALUE_OPTIONAL,
+    ])
+    {
+        $root = $this->getConfig()->get('drupal.root');
+        $sites = array_keys($this->getConfig()->get('drupal.sites'));
+        $folders = ['public', 'private', 'tmp', 'translations'];
+        $filesystem = new Filesystem();
+        foreach ($sites as $site) {
+            foreach ($folders as $folder) {
+                $path = 'sites/' . $site . '/files/' . $folder;
+                $fullPath = getcwd() . '/files/' . $path;
+                $fullPathWeb = getcwd() . '/' . $root . '/' . $path;
+                $filesystem->mkdir($fullPath, 0700);
+                if ($folder === 'public') {
+                    $filesystem->symlink($fullPath, $fullPathWeb);
+                }
+            }
+        }
     }
 
     /**
@@ -62,20 +98,48 @@ class DrupalComposerCommands extends AbstractCommands
         'drupal-root' => InputOption::VALUE_OPTIONAL,
     ])
     {
-        $this->setName();
-        $this->setDescription();
-        $this->setAuthor();
+        $this->createComposerJson();
+        $this->setComposerExecutable();
+        $this->transformComposerJson();
+        // $this->normalizeComposerJson();
+        $this->composerRequireDrupal();
+        if ($this->tasks !== []) {
+            return $this
+                ->collectionBuilder()
+                ->addTaskList($this->tasks);
+        }
+    }
 
-        $composer = [
-            'name' => $this->input()->getOption('name'),
-            'description' => $this->input()->getOption('description'),
-        ];
-        var_dump($composer);
-
-        if (!file_exists('composer.json')) {
-            $json = json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-            file_put_contents('composer.json', $json);
-        }  
+    /**
+     * Build a development codebase.
+     *
+     * @param array $options
+     *   Command options.
+     *
+     * @return \Robo\Collection\CollectionBuilder
+     *   Collection builder.
+     *
+     * @command drupal:build-dev
+     *
+     * @option branch       The branch name.
+     */
+    public function drupalBuildDev(array $options = [
+        'branch' =>  InputOption::VALUE_OPTIONAL,
+    ])
+    {
+        $branch = isset($options['branch']) ? $options['branch'] : 'TODO';
+        $buildPath = "build/dev/$branch";
+        $this->_exec("mkdir -p $buildPath");
+        $this->taskRsync()
+          ->fromPath('./')
+          ->toPath($buildPath)
+          ->exclude(['build/', 'web/', 'vendor/'])
+          ->recursive()
+          ->run();
+        $this->taskComposerInstall()
+          ->workingDir($buildPath)
+          ->run();
+        $this->taskExec('./vendor/bin/drush site-install standard -y -r web --db-url=mysql://root:@localhost:3306/TODO')->dir($buildPath)->run();
     }
 
     protected function setAuthor() {
@@ -247,33 +311,20 @@ class DrupalComposerCommands extends AbstractCommands
         $this->input()->setOption('name', $name);
     }
 
-    /**
-     * Create a Drupal composer.json.
-     *
-     * @param array $options
-     *   Command options.
-     *
-     * @return \Robo\Collection\CollectionBuilder
-     *   Collection builder.
-     *
-     * @command composer:create-drupal
-     *
-     * @option drupal-root  The root directory you wish to have Drupal installed at.
-     *
-     * @aliases composer:cd,ccd
-     */
-    public function createComposer(array $options = [
-        'drupal-root' => InputOption::VALUE_OPTIONAL,
-    ])
+    public function createComposerJson()
     {
-        $this->setComposerExecutable();
-        $this->transformComposerJson();
-        $this->normalizeComposerJson();
-        $this->composerRequireDrupal();
-        if ($this->tasks !== []) {
-            return $this
-                ->collectionBuilder()
-                ->addTaskList($this->tasks);
+        $this->setName();
+        $this->setDescription();
+        $this->setAuthor();
+
+        $composer = [
+            'name' => $this->input()->getOption('name'),
+            'description' => $this->input()->getOption('description'),
+        ];
+
+        if (!file_exists('composer.json')) {
+            $json = json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+            file_put_contents('composer.json', $json);
         }
     }
 
@@ -292,9 +343,10 @@ class DrupalComposerCommands extends AbstractCommands
         $this->tasks[] = $this->taskExecStack()
           ->stopOnFail()
           ->executable($this->composer)
-          ->exec('require composer/installers drupal/core drupal/core-composer-scaffold --no-update --quiet')
-          ->exec('require drupal/core-dev drupal-composer/drupal-security-advisories --dev --no-update --quiet')
-          ->exec('install --ansi');
+          ->exec('require composer/installers drupal/core drupal/core-composer-scaffold drush/drush --no-update')
+          ->exec('require drupal-composer/drupal-security-advisories:dev-8.x-v2 drupal/core-dev ergebnis/composer-normalize --dev --no-update')
+          ->exec('normalize --no-update-lock')
+          ->exec('install');
     }
 
     protected function transformComposerJson() {
@@ -306,19 +358,19 @@ class DrupalComposerCommands extends AbstractCommands
         file_put_contents($composerFile, json_encode($newComposerArray, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
 
-    protected function normalizeComposerJson() {
-        // First remove composer.lock silently because normalize will trip that
-        // the lock file is out of date.
-        $this->taskExec("rm -f composer.lock")
-          ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
-          ->run();
-        // Install and execute composer normalize
-        $this->tasks[] = $this->taskExecStack()
-         ->stopOnFail()
-         ->executable($this->composer)
-         ->exec('global require ergebnis/composer-normalize --quiet')
-         ->exec('normalize --quiet');
-    }
+    // protected function normalizeComposerJson() {
+    //     // First remove composer.lock silently because normalize will trip that
+    //     // the lock file is out of date.
+    //     $this->taskExec("rm -f composer.lock")
+    //       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
+    //       ->run();
+    //     // Install and execute composer normalize
+    //     $this->tasks[] = $this->taskExecStack()
+    //      ->stopOnFail()
+    //      ->executable($this->composer)
+    //      ->exec('global require ergebnis/composer-normalize --quiet')
+    //      ->exec('normalize --quiet');
+    // }
 
     protected function array_merge_recursive_distinct () {
       $arrays = func_get_args();
