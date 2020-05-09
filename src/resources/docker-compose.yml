@@ -1,0 +1,23 @@
+version: '3'
+services:
+  web:
+    image: fpfis/httpd-php-dev:7.3
+    working_dir: ${PWD}
+    ports:
+      - 8080:8080
+    volumes:
+      - ${PWD}:${PWD}
+    environment:
+      DOCUMENT_ROOT: ${PWD}
+      GITHUB_API_TOKEN:
+      XDEBUG_CONFIG: remote_connect_back=0 remote_host=172.17.0.1 remote_enable=1
+  mysql:
+    image: mysql:5.7
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    volumes:
+      - mysql:/var/lib/mysql
+  selenium:
+    image: selenium/standalone-chrome
+volumes:
+  mysql:

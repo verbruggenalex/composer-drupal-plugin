@@ -59,13 +59,15 @@ class DrupalComposerCommands extends AbstractCommands
     ])
     {
         $root = $this->getConfig()->get('drupal.root');
-        $sites = array_keys($this->getConfig()->get('drupal.sites'));
-        $folders = ['public', 'private', 'tmp', 'translations'];
+        $files = $this->getConfig()->get('drupal.files');
+        $sites = $this->getConfig()->get('drupal.sites');
+
+        $folders = ['public', 'private', 'temp', 'translations'];
         $filesystem = new Filesystem();
         foreach ($sites as $site) {
             foreach ($folders as $folder) {
                 $path = 'sites/' . $site . '/files/' . $folder;
-                $fullPath = getcwd() . '/files/' . $path;
+                $fullPath = $files . '/' . $path;
                 $fullPathWeb = getcwd() . '/' . $root . '/' . $path;
                 $filesystem->mkdir($fullPath, 0700);
                 if ($folder === 'public') {
@@ -345,7 +347,7 @@ class DrupalComposerCommands extends AbstractCommands
           ->executable($this->composer)
           ->exec('require composer/installers drupal/core drupal/core-composer-scaffold drush/drush --no-update')
           ->exec('require drupal-composer/drupal-security-advisories:dev-8.x-v2 drupal/core-dev ergebnis/composer-normalize --dev --no-update')
-          ->exec('normalize --no-update-lock')
+        //   ->exec('normalize --no-update-lock')
           ->exec('install');
     }
 

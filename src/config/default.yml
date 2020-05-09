@@ -1,5 +1,6 @@
 drupal:
   root: web
+  files: /files
   sites:
     default:
     site1:
