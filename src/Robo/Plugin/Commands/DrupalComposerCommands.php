@@ -129,19 +129,24 @@ class DrupalComposerCommands extends AbstractCommands
         'branch' =>  InputOption::VALUE_OPTIONAL,
     ])
     {
-        $branch = isset($options['branch']) ? $options['branch'] : 'TODO';
+        $branch = $this->taskExec('git rev-parse --abbrev-ref HEAD')
+         ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
+         ->run()
+         ->getMessage();
+
+        $branch = isset($options['branch']) ? $options['branch'] : trim($branch);
         $buildPath = "build/dev/$branch";
         $this->_exec("mkdir -p $buildPath");
         $this->taskRsync()
           ->fromPath('./')
           ->toPath($buildPath)
-          ->exclude(['build/', 'web/', 'vendor/'])
+          ->filter(':- .gitignore')
           ->recursive()
           ->run();
         $this->taskComposerInstall()
           ->workingDir($buildPath)
           ->run();
-        $this->taskExec('./vendor/bin/drush site-install standard -y -r web --db-url=mysql://root:@localhost:3306/TODO')->dir($buildPath)->run();
+        // $this->taskExec("./vendor/bin/drush site-install standard -y -r web --db-url=mysql://root:@mysql:3306/dev_$branch")->dir($buildPath)->run();
     }
 
     protected function setAuthor() {
