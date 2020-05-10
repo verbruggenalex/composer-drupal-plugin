@@ -58,7 +58,7 @@ class DrupalComposerCommands extends AbstractCommands
         'drupal-root' => InputOption::VALUE_OPTIONAL,
     ])
     {
-        $root = $this->getConfig()->get('drupal.root');
+        $root = isset($options['drupal-root']) ? $options['drupal-root'] : $this->getConfig()->get('drupal.root');
         $files = $this->getConfig()->get('drupal.files');
         $sites = $this->getConfig()->get('drupal.sites');
 
