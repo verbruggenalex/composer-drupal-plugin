@@ -146,7 +146,7 @@ class DrupalComposerCommands extends AbstractCommands
         $this->taskComposerInstall()
           ->workingDir($buildPath)
           ->run();
-        // $this->taskExec("./vendor/bin/drush site-install standard -y -r web --db-url=mysql://root:@mysql:3306/dev_$branch")->dir($buildPath)->run();
+        $this->taskExec("./vendor/bin/drush site-install standard -y -r web --account-pass=admin --db-url=mysql://root:@mysql:3306/dev_$branch")->dir($buildPath)->run();
     }
 
     protected function setAuthor() {
