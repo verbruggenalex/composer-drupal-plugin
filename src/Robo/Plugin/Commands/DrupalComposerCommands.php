@@ -64,7 +64,7 @@ class DrupalComposerCommands extends AbstractCommands
 
         $folders = ['public', 'private', 'temp', 'translations'];
         $filesystem = new Filesystem();
-        foreach ($sites as $site) {
+        foreach ($sites as $site => $location) {
             foreach ($folders as $folder) {
                 $path = 'sites/' . $site . '/files/' . $folder;
                 $fullPath = $files . '/' . $path;
