@@ -17,7 +17,7 @@ $databases['default']['default'] = array (
 
 // Files folders.
 $settings['file_private_path'] = '/files/' . $site_path . '/files/private';
-$settings['file_public_path'] = $app_root . '/' . $site_path . '/files/public';
+$settings['file_public_path'] = $site_path . '/files/public';
 $settings['file_temp_path'] = '/files/' . $site_path . '/files/temp';
 $conf['l10n_update_download_store'] = '/files/' . $site_path . '/files/translations';
 
