@@ -13,7 +13,7 @@ $databases['default']['default'] = array (
 );
 
 // // Location of the site configuration files, relative to the site root.
-// $config_directories['sync'] = '../config/' . $site_path . '/sync';
+$config_directories['sync'] = '../config/' . $site_path . '/sync';
 
 // Files folders.
 $settings['file_private_path'] = '/files/' . $site_path . '/files/private';
@@ -24,7 +24,4 @@ $conf['l10n_update_download_store'] = '/files/' . $site_path . '/files/translati
 
 // $settings['hash_salt'] = getenv('DRUPAL_HASH_SALT') !== FALSE ? getenv('DRUPAL_HASH_SALT') : '0irtUmg80fCmL52y5x1Xj4N0JUBphTQmYFvnFwpEraZIu6_ZyQISb8EF9Fdyu3b8zIZR6kkNVg';
 
-// $settings['trusted_host_patterns'] = [
-//   '^webgate\.ec\.europa\.eu$',
-//   '^webgate\.acceptance\.ec\.europa\.eu$',
-// ];
+$settings['trusted_host_patterns'] = ['*'];

@@ -67,6 +67,42 @@ class DrupalComposerCommands extends AbstractCommands
     }
 
     /**
+     * Generate Drupal settings.
+     *
+     * @param array $options
+     *   Command options.
+     *
+     * @return \Robo\Collection\CollectionBuilder
+     *   Collection builder.
+     *
+     * @command drupal:generate-settings
+     *
+     * @option drupal-root  The root directory for Drupal.
+     */
+    public function drupalGenerateSettings(array $options = [
+        'drupal-root' => InputOption::VALUE_OPTIONAL,
+    ])
+    {
+        $root = isset($options['drupal-root']) ? $options['drupal-root'] : $this->getConfig()->get('drupal.root');
+        $sites = $this->getConfig()->get('drupal.sites');
+        $append = "
+if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
+  include \$app_root . '/' . \$site_path . '/settings.override.php';
+}";
+
+        $filesystem = new Filesystem();
+        foreach ($sites as $site => $location) {
+            $arguments = [
+                'from' => 'vendor/verbruggenalex/composer-drupal-plugin/src/resources/settings.php',
+                'to' => $root . '/sites/' . $site . '/settings.override.php',
+            ];
+            $this->task(ProcessTask::class)->setTaskArguments($arguments)->run();
+            $this->taskFilesystemStack()->copy(getcwd() . '/' . $root . '/sites/default/default.settings.php', getcwd() . '/' . $root . '/sites/' . $site . '/settings.php', true)->run();
+            $this->taskWriteToFile(getcwd() . '/' . $root . '/sites/' . $site . '/settings.php')->append()->lines([$append])->run();
+        }
+    }
+
+    /**
      * Generate Drupal folders.
      *
      * @param array $options
@@ -86,31 +122,22 @@ class DrupalComposerCommands extends AbstractCommands
         $root = isset($options['drupal-root']) ? $options['drupal-root'] : $this->getConfig()->get('drupal.root');
         $files = $this->getConfig()->get('drupal.files');
         $sites = $this->getConfig()->get('drupal.sites');
-        $append = "
-if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
-  include \$app_root . '/' . \$site_path . '/settings.override.php';
-}";
 
         $folders = ['public', 'private', 'temp', 'translations'];
         $filesystem = new Filesystem();
         foreach ($sites as $site => $location) {
-            $arguments = [
-                'from' => 'vendor/verbruggenalex/composer-drupal-plugin/src/resources/settings.php',
-                'to' => $root . '/sites/' . $site . '/settings.override.php',
-            ];
-            $this->task(ProcessTask::class)->setTaskArguments($arguments)->run();
-            $this->taskFilesystemStack()->copy(getcwd() . '/' . $root . '/sites/default/default.settings.php', getcwd() . '/' . $root . '/sites/' . $site . '/settings.php', true)->run();
-            $this->taskWriteToFile(getcwd() . '/' . $root . '/sites/' . $site . '/settings.php')->append()->lines([$append])->run();
             foreach ($folders as $folder) {
                 $path = 'sites/' . $site . '/files/' . $folder;
                 $fullPath = $files . '/' . $path;
                 $fullPathWeb = getcwd() . '/' . $root . '/' . $path;
                 $filesystem->mkdir($fullPath, 0700);
+                $filesystem->mkdir(getcwd() . '/config/' . $site . '/sync');
                 if ($folder === 'public') {
                     $filesystem->symlink($fullPath, $fullPathWeb);
                 }
             }
         }
+        $this->drupalGenerateSettings($options);
     }
 
     /**
