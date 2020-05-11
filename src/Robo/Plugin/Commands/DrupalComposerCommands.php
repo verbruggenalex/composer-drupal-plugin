@@ -5,6 +5,7 @@ namespace VerbruggenAlex\ComposerDrupalPlugin\Robo\Plugin\Commands;
 use PhpTaskman\Core\Robo\Plugin\Commands\AbstractCommands;
 use PhpTaskman\Core\Taskman;
 use PhpTaskman\CoreTasks\Plugin\Task\CollectionFactoryTask;
+use PhpTaskman\CoreTasks\Plugin\Task\ProcessTask;
 use Robo\Common\ResourceExistenceChecker;
 use Robo\Contract\VerbosityThresholdInterface;
 use Symfony\Component\Console\Event\ConsoleCommandEvent;
@@ -42,6 +43,30 @@ class DrupalComposerCommands extends AbstractCommands
     }
 
     /**
+     * Set runtime configuration values.
+     *
+     * @param \Symfony\Component\Console\Event\ConsoleCommandEvent $event
+     *
+     * @hook command-event drupal:generate-folders
+     */
+    public function setRuntimeConfig(ConsoleCommandEvent $event)
+    {
+        // Get the database name from the path if it matches pattern below.
+        if (preg_match('/build_(dev|dist)_(.*)/', str_replace('/', '_', getcwd()), $match)) {
+            $dbname = str_replace('build_', '', $match[0]);
+        }
+        // Otherwise just use the branch.
+        else {
+            $dbname = $this->taskExec('git rev-parse --abbrev-ref HEAD')
+             ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
+             ->run()
+             ->getMessage();
+        }
+
+        $this->getConfig()->set('drupal.database.name', $dbname);
+    }
+
+    /**
      * Generate Drupal folders.
      *
      * @param array $options
@@ -61,10 +86,21 @@ class DrupalComposerCommands extends AbstractCommands
         $root = isset($options['drupal-root']) ? $options['drupal-root'] : $this->getConfig()->get('drupal.root');
         $files = $this->getConfig()->get('drupal.files');
         $sites = $this->getConfig()->get('drupal.sites');
+        $append = "
+if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
+  include \$app_root . '/' . \$site_path . '/settings.override.php';
+}";
 
         $folders = ['public', 'private', 'temp', 'translations'];
         $filesystem = new Filesystem();
         foreach ($sites as $site => $location) {
+            $arguments = [
+                'from' => 'vendor/verbruggenalex/composer-drupal-plugin/src/resources/settings.php',
+                'to' => $root . '/sites/' . $site . '/settings.override.php',
+            ];
+            $this->task(ProcessTask::class)->setTaskArguments($arguments)->run();
+            $this->taskFilesystemStack()->copy(getcwd() . '/' . $root . '/sites/default/default.settings.php', getcwd() . '/' . $root . '/sites/' . $site . '/settings.php', true)->run();
+            $this->taskWriteToFile(getcwd() . '/' . $root . '/sites/' . $site . '/settings.php')->append()->lines([$append])->run();
             foreach ($folders as $folder) {
                 $path = 'sites/' . $site . '/files/' . $folder;
                 $fullPath = $files . '/' . $path;
