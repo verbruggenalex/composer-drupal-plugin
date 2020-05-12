@@ -3,10 +3,10 @@ $site_name = basename($site_path);
 
 // Database settings.
 $databases['default']['default'] = array (
-  'database' => '${drupal.database.name}',
+  'database' => "${drupal.database.name}",
   'username' => 'root',
   'password' => '',
-  'prefix' => $site_name,
+  'prefix' => '',
   'host' => 'mysql',
   'port' => '3306',
   'namespace' => 'Drupal\\Core\\Database\\Driver\\mysql',

@@ -51,19 +51,16 @@ class DrupalComposerCommands extends AbstractCommands
      */
     public function setRuntimeConfig(ConsoleCommandEvent $event)
     {
-        // Get the database name from the path if it matches pattern below.
-        if (preg_match('/build_(dev|dist)_(.*)/', str_replace('/', '_', getcwd()), $match)) {
-            $dbname = str_replace('build_', '', $match[0]);
-        }
-        // Otherwise just use the branch.
-        else {
-            $dbname = $this->taskExec('git rev-parse --abbrev-ref HEAD')
-             ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
-             ->run()
-             ->getMessage();
-        }
+        // Set the build type from path if it matches pattern below.
+        $build_type = preg_match('~/build/(dev|dist)/~', getcwd(), $match) ? $match[1] : '';
+        $this->getConfig()->set('build.type', $build_type);
 
-        $this->getConfig()->set('drupal.database.name', $dbname);
+        // Set the branch
+        $build_branch = $this->taskExec('git rev-parse --abbrev-ref HEAD')
+         ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
+         ->run()
+         ->getMessage();
+        $this->getConfig()->set('build.branch', trim($build_branch));
     }
 
     /**
@@ -92,6 +89,12 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
 
         $filesystem = new Filesystem();
         foreach ($sites as $site => $location) {
+            $db_name = implode('_', array_filter([
+                $this->getConfig()->get('build.type'),
+                $site,
+                $this->getConfig()->get('build.branch'),
+            ]));
+            $this->getConfig()->set('drupal.database.name', $db_name);
             $arguments = [
                 'from' => 'vendor/verbruggenalex/composer-drupal-plugin/src/resources/settings.php',
                 'to' => $root . '/sites/' . $site . '/settings.override.php',
