@@ -125,13 +125,12 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
 
         $folders = ['public', 'private', 'temp', 'translations'];
         $filesystem = new Filesystem();
+        $filesystem->mkdir(getcwd() . '/config');
         foreach ($sites as $site => $location) {
             foreach ($folders as $folder) {
-                $path = 'sites/' . $site . '/files/' . $folder;
-                $fullPath = $files . '/' . $path;
-                $fullPathWeb = getcwd() . '/' . $root . '/' . $path;
+                $fullPath = $files . '/' . $site . '/files/' . $folder;
+                $fullPathWeb = getcwd() . '/' . $root . '/sites/' . $site . '/files/' . $folder;
                 $filesystem->mkdir($fullPath, 0700);
-                $filesystem->mkdir(getcwd() . '/config/' . $site . '/sync');
                 if ($folder === 'public') {
                     $filesystem->symlink($fullPath, $fullPathWeb);
                 }
