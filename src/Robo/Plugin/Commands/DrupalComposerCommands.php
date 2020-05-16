@@ -214,6 +214,46 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
         $this->taskExec('./vendor/bin/drush site-install standard -y -r web --account-pass=admin')->dir($buildPath)->run();
     }
 
+    /**
+     * Deploy from one build to another.
+     *
+     * @param array $options
+     *   Command options.
+     *
+     * @return \Robo\Collection\CollectionBuilder
+     *   Collection builder.
+     *
+     * @command deploy:build
+     *
+     * @option from     The path from which you want to deploy.
+     * @option to       The path to which you want to deploy.
+     */
+    public function deployBuild(array $options = [
+        'from' =>  InputOption::VALUE_REQUIRED,
+        'to' =>  InputOption::VALUE_REQUIRED,
+    ])
+    {
+        $from = $options['from'];
+        $to = $options['to'];
+        $drush = './vendor/bin/drush';
+        $dumpfile = getcwd() . '/dump.sql';
+        
+        // @TODO: Validation of the presence of both paths.
+        
+        // @TODO: Validation on site status of from.
+        $this->taskExecStack()
+            ->stopOnFail()
+            ->dir($from)
+            ->exec("$drush sql-dump --result-file=$dumpfile")
+            ->dir($to)
+            ->exec("$drush sql-create -y")
+            ->exec("$drush sql-drop -y")
+            ->exec("$drush sql-cli < $dumpfile")
+            ->exec("./vendor/bin/taskman build:deploy")
+            ->run();
+        
+    }
+
     protected function setAuthor() {
         $git = $this->getGitConfig();
         if (null === $author = $this->input()->getOption('author')) {
