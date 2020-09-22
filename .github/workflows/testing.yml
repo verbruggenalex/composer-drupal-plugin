@@ -36,4 +36,4 @@ jobs:
 
     - name: Initialize a Drupal composer.json
       run: |
-        ./vendor/bin/taskman drupal:init
+        docker-compose exec -T web ./vendor/bin/taskman drupal:init -D build --name="vendor/project" --description="Test project" --author="Alex Verbruggen <verbruggenalex@gmail.com>" -n
