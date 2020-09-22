@@ -1,0 +1,39 @@
+name: Testing repository
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Start environment
+      run: |
+        sudo chown -R 1001:1000 .
+        docker-compose up -d
+        sleep 30
+
+    - name: Composer cache
+      id: composer-cache
+      uses: actions/cache@v2
+      with:
+        path: vendor
+        key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-
+
+    - name: Composer install
+      run: |
+        docker-compose exec -T web composer install --prefer-dist --no-progress --no-suggest --ansi
+
+    - name: Initialize a Drupal composer.json
+      run: |
+        ./vendor/bin/taskman drupal:init

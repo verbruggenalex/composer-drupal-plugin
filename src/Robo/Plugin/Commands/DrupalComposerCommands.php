@@ -237,9 +237,9 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
         $to = $options['to'];
         $drush = './vendor/bin/drush';
         $dumpfile = getcwd() . '/dump.sql';
-        
+
         // @TODO: Validation of the presence of both paths.
-        
+
         // @TODO: Validation on site status of from.
         $this->taskExecStack()
             ->stopOnFail()
@@ -251,7 +251,7 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
             ->exec("$drush sql-cli < $dumpfile")
             ->exec("./vendor/bin/taskman build:deploy")
             ->run();
-        
+
     }
 
     protected function setAuthor() {
@@ -287,7 +287,7 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
             },
             null,
             $author
-        
+
         );
 
         $author = $this->getDialog()->ask($this->input(), $this->output(), $question);

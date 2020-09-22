@@ -1,0 +1,55 @@
+version: '3'
+services:
+# ==============================================================================
+  web:
+    image: verbral/php-theia:7.4
+    working_dir: ${PWD}
+    environment:
+      APACHE_DOCUMENT_ROOT: ${PWD}
+      PHP_EXTENSION_BLACKFIRE: 1
+      PHP_EXTENSION_GD: 1
+      PHP_EXTENSION_BCMATH: 1
+      PHP_INI_ERROR_REPORTING: E_ALL
+      PHP_INI_MEMORY_LIMIT: 2g
+      WAKATIME_API_KEY:
+      GIT_USER_NAME:
+      GIT_USER_EMAIL:
+    working_dir: ${PWD}
+    volumes:
+      - ${PWD}:${PWD}
+      - ${PWD}/files:/files
+      - ~/.ssh:/home/docker/.ssh
+      - ~/.composer:/home/docker/.composer
+    depends_on:
+      - mysql
+    ports:
+      - 81:80
+      - 3000:3000
+# ==============================================================================
+  mysql:
+    image: mysql:5.7
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+      - MYSQL_DATABASE=drupal
+    volumes:
+      - mysql:/var/lib/mysql
+# ==============================================================================
+  selenium:
+    image: selenium/standalone-chrome
+# ==============================================================================
+#  backstop:
+#    image: backstopjs/backstopjs
+#    volumes:
+#      - ${PWD}/tests/backstop:/src
+#    user: 1000:1000
+# ==============================================================================
+#  blackfire:
+#    image: blackfire/blackfire
+#    environment:
+#        - BLACKFIRE_CLIENT_ID
+#        - BLACKFIRE_CLIENT_TOKEN
+#        - BLACKFIRE_SERVER_ID
+#        - BLACKFIRE_SERVER_TOKEN
+# ==============================================================================
+volumes:
+  mysql:
