@@ -5,7 +5,6 @@ namespace VerbruggenAlex\RoboDrupal\Robo\Plugin\Commands;
 use Robo\Robo;
 use Robo\Common\ResourceExistenceChecker;
 use Robo\Contract\VerbosityThresholdInterface;
-use Symfony\Component\Console\Event\ConsoleCommandEvent;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Filesystem\Filesystem;
@@ -54,13 +53,13 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
   include \$app_root . '/' . \$site_path . '/settings.override.php';
 }";
 
-        foreach ($sites as $site => $location) {
+        foreach ($sites as $site) {
             $db_name = implode('_', array_filter([
                 Robo::Config()->get('build.type'),
                 $site,
                 Robo::Config()->get('build.branch'),
             ]));
-            $this->getConfig()->set('drupal.database.name', $db_name);
+            Robo::Config()->set('drupal.database.name', $db_name);
             $arguments = [
                 'from' => 'vendor/verbruggenalex/composer-drupal-plugin/src/resources/settings.php',
                 'to' => $root . '/sites/' . $site . '/settings.override.php',
@@ -102,7 +101,7 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
         $folders = ['public', 'private', 'temp', 'translations'];
         $filesystem = new Filesystem();
         $filesystem->mkdir(getcwd() . '/config');
-        foreach ($sites as $site => $location) {
+        foreach ($sites as $site) {
             foreach ($folders as $folder) {
                 $fullPath = $files . '/' . $site . '/files/' . $folder;
                 $fullPathWeb = getcwd() . '/' . $root . '/sites/' . $site . '/files/' . $folder;
@@ -139,15 +138,15 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
     ])
     {
         $this->createComposerJson();
-        // $this->setComposerExecutable();
-        // $this->transformComposerJson();
-        // // $this->normalizeComposerJson();
-        // $this->composerRequireDrupal();
-        // if ($this->tasks !== []) {
-        //     return $this
-        //         ->collectionBuilder()
-        //         ->addTaskList($this->tasks);
-        // }
+        $this->setComposerExecutable();
+        $this->transformComposerJson();
+        // $this->normalizeComposerJson();
+        $this->composerRequireDrupal();
+        if ($this->tasks !== []) {
+            return $this
+                ->collectionBuilder()
+                ->addTaskList($this->tasks);
+        }
     }
 
     /**
@@ -310,13 +309,7 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
 
         $finder = new ExecutableFinder();
         $gitBin = $finder->find('git');
-
-        // TODO in v3 always call with an array
-        if (method_exists('Symfony\Component\Process\Process', 'fromShellCommandline')) {
-            $cmd = new Process(array($gitBin, 'config', '-l'));
-        } else {
-            $cmd = new Process(sprintf('%s config -l', ProcessExecutor::escape($gitBin)));
-        }
+        $cmd = new Process(array($gitBin, 'config', '-l'));
         $cmd->run();
 
         if ($cmd->isSuccessful()) {
