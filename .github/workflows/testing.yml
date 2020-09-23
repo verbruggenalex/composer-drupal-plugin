@@ -2,9 +2,7 @@ name: Testing repository
 
 on:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    branches: [ * ]
 
 jobs:
   build:
@@ -36,4 +34,4 @@ jobs:
 
     - name: Initialize a Drupal composer.json
       run: |
-        docker-compose exec -T -w ${PWD}/build web ../vendor/bin/taskman drupal:init --name="verbruggenalex/project" --description="Test project" --author="Alex Verbruggen <verbruggenalex@gmail.com>" -n
+        docker-compose exec -T -w ${PWD}/build web ../vendor/bin/robo drupal:init --name="verbruggenalex/project" --description="Test project" --author="Alex Verbruggen <verbruggenalex@gmail.com>" -n

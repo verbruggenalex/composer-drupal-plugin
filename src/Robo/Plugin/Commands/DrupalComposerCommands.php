@@ -24,6 +24,11 @@ class DrupalComposerCommands extends \Robo\Tasks
     /** @var string $composer */
     protected $composer;
 
+    public function __construct()
+    {
+      \Robo\Robo::loadConfiguration([__DIR__ . '/../../../config/default.yml']);
+    }
+
     /**
      * Generate Drupal settings.
      *
@@ -249,8 +254,8 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
             if ($value === 'n' || $value === 'no') {
                 return;
             }
-                $value = (string) $value ?: $author;
-                $author = $self->parseAuthorString($value);
+                $value = $value ?: $author;
+                $author = $self->parseAuthorString((string) $value);
 
                 return sprintf('%s <%s>', $author['name'], $author['email']);
         });
