@@ -87,7 +87,6 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
   include \$app_root . '/' . \$site_path . '/settings.override.php';
 }";
 
-        $filesystem = new Filesystem();
         foreach ($sites as $site => $location) {
             $db_name = implode('_', array_filter([
                 $this->getConfig()->get('build.type'),
@@ -158,7 +157,7 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
      * @option author       The author of the project.
      * @option drupal-root  The root directory for Drupal.
      */
-    public function drupalInit(array $options = [
+    public function drupalInit(/** @scrutinizer ignore-unused */ array $options = [
         'name' =>  InputOption::VALUE_OPTIONAL,
         'description' => InputOption::VALUE_OPTIONAL,
         'author' => InputOption::VALUE_OPTIONAL,
@@ -280,14 +279,11 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
                 if ($value === 'n' || $value === 'no') {
                     return;
                 }
-                $value = $value ?: $author;
+                $value = (string) $value ?: $author;
                 $author = $self->parseAuthorString($value);
 
                 return sprintf('%s <%s>', $author['name'], $author['email']);
-            },
-            null,
-            $author
-
+            }
         );
 
         $author = $this->getDialog()->ask($this->input(), $this->output(), $question);
@@ -362,7 +358,7 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
     }
 
     protected function setDescription() {
-        $description = $this->input()->getOption('description') ?: false;
+        $description = (string) $this->input()->getOption('description') ?: false;
         $description = $this->getDialog()->ask(
             $this->input(),
             $this->output(),
@@ -374,6 +370,7 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
 
     protected function setName() {
         $cwd = realpath(".");
+        $git = $this->getGitConfig();
 
         if (!$name = $this->input()->getOption('name')) {
             $name = basename($cwd);
@@ -404,14 +401,12 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
 
                 if (!preg_match('{^[a-z0-9_.-]+/[a-z0-9_.-]+$}D', $value)) {
                   throw new \InvalidArgumentException(
-                    'The package name ' . $value . ' is invalid, it should be lowercase and have a vendor name, a forward slash, and a package name, matching: [a-z0-9_.-]+/[a-z0-9_.-]+'
+                    'The package name ' . (string) $value . ' is invalid, it should be lowercase and have a vendor name, a forward slash, and a package name, matching: [a-z0-9_.-]+/[a-z0-9_.-]+'
                   );
                 }
 
                 return $value;
-              },
-              null,
-              $name
+              }
             );
             $name = $this->getDialog()->ask($this->input(), $this->output(), $question);
         } else {
