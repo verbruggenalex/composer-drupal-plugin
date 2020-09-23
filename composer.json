@@ -9,7 +9,7 @@
     }
   ],
   "require": {
-    "php": "^7.1",
+    "php": ">=7.2.5",
     "consolidation/robo": "^2.2",
     "symfony/yaml": "^5.1"
   },
