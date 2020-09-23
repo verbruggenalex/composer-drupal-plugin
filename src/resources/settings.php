@@ -23,6 +23,9 @@ $settings['file_temp_path'] = '/files/' . $site_name . '/files/temp';
 $conf['l10n_update_download_store'] = '/files/' . $site_name . '/files/translations';
 
 
-// $settings['hash_salt'] = getenv('DRUPAL_HASH_SALT') !== FALSE ? getenv('DRUPAL_HASH_SALT') : '0irtUmg80fCmL52y5x1Xj4N0JUBphTQmYFvnFwpEraZIu6_ZyQISb8EF9Fdyu3b8zIZR6kkNVg';
+// $settings['hash_salt'] =
+//   getenv('DRUPAL_HASH_SALT') !== FALSE ?
+//   getenv('DRUPAL_HASH_SALT') :
+//   '0irtUmg80fCmL52y5x1Xj4N0JUBphTQmYFvnFwpEraZIu6_ZyQISb8EF9Fdyu3b8zIZR6kkNVg';
 
 $settings['trusted_host_patterns'] = ['.*'];

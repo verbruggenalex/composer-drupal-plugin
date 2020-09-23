@@ -1,0 +1,9 @@
+build:
+  nodes:
+    analysis:
+      tests:
+        override:
+          - php-scrutinizer-run
+          - command: phpcs-run --config phpcs.xml
+checks:
+    php: true
