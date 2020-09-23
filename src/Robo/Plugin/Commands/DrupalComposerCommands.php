@@ -99,8 +99,15 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
                 'to' => $root . '/sites/' . $site . '/settings.override.php',
             ];
             $this->task(ProcessTask::class)->setTaskArguments($arguments)->run();
-            $this->taskFilesystemStack()->copy(getcwd() . '/' . $root . '/sites/default/default.settings.php', getcwd() . '/' . $root . '/sites/' . $site . '/settings.php', true)->run();
-            $this->taskWriteToFile(getcwd() . '/' . $root . '/sites/' . $site . '/settings.php')->append()->lines([$append])->run();
+            $this->taskFilesystemStack()->copy(
+                getcwd() . '/' . $root . '/sites/default/default.settings.php',
+                getcwd() . '/' . $root . '/sites/' . $site . '/settings.php',
+                true
+            )->run();
+            $this->taskWriteToFile(getcwd() . '/' . $root . '/sites/' . $site . '/settings.php')
+              ->append()
+              ->lines([$append])
+              ->run();
         }
     }
 
@@ -210,7 +217,9 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
         $this->taskComposerInstall()
           ->workingDir($buildPath)
           ->run();
-        $this->taskExec('./vendor/bin/drush site-install standard -y -r web --account-pass=admin')->dir($buildPath)->run();
+        $this->taskExec('./vendor/bin/drush site-install standard -y -r web --account-pass=admin')
+          ->dir($buildPath)
+          ->run();
     }
 
     /**
@@ -404,7 +413,10 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
 
                     if (!preg_match('{^[a-z0-9_.-]+/[a-z0-9_.-]+$}D', $value)) {
                         throw new \InvalidArgumentException(
-                            'The package name ' . (string) $value . ' is invalid, it should be lowercase and have a vendor name, a forward slash, and a package name, matching: [a-z0-9_.-]+/[a-z0-9_.-]+'
+                            'The package name ' . (string) $value . ' is invalid,
+                            it should be lowercase and have a vendor name, a
+                            forward slash, and a package name, matching:
+                            [a-z0-9_.-]+/[a-z0-9_.-]+'
                         );
                     }
 
@@ -453,11 +465,22 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
     protected function composerRequireDrupal()
     {
         // Update the composer.json with drupal requirements and run update.
+        $require = [
+            'composer/installers',
+            'drupal/core',
+            'drupal/core-composer-scaffold',
+            'drush/drush',
+        ];
+        $requireDev = [
+            'drupal-composer/drupal-security-advisories:dev-8.x-v2',
+            'drupal/core-dev',
+            'ergebnis/composer-normalize',
+        ];
         $this->tasks[] = $this->taskExecStack()
           ->stopOnFail()
           ->executable($this->composer)
-          ->exec('require composer/installers drupal/core drupal/core-composer-scaffold drush/drush --no-update')
-          ->exec('require drupal-composer/drupal-security-advisories:dev-8.x-v2 drupal/core-dev ergebnis/composer-normalize --dev --no-update')
+          ->exec('require ' . implode(' ', $require) . ' --no-update')
+          ->exec('require ' . implode(' ', $requireDev) . ' --dev --no-update')
         //   ->exec('normalize --no-update-lock')
           ->exec('install');
     }
@@ -468,7 +491,7 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
         $composerFile = \realpath('composer.json');
         $composerArray = json_decode(file_get_contents($composerFile), true);
         $config = $this->getConfig()->get('composer.drupal');
-        $newComposerArray = $this->array_merge_recursive_distinct($composerArray, $config);
+        $newComposerArray = $this->arrayMergeRecursiveDistinct($composerArray, $config);
         file_put_contents($composerFile, json_encode($newComposerArray, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
 
@@ -486,7 +509,7 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
     //      ->exec('normalize --quiet');
     // }
 
-    protected function array_merge_recursive_distinct()
+    protected function arrayMergeRecursiveDistinct()
     {
         $arrays = func_get_args();
         $base = array_shift($arrays);
@@ -503,7 +526,7 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
                     continue;
                 }
                 if (is_array($value) or is_array($base[$key])) {
-                    $base[$key] = $this->array_merge_recursive_distinct($base[$key], $append[$key]);
+                    $base[$key] = $this->arrayMergeRecursiveDistinct($base[$key], $append[$key]);
                 } elseif (is_numeric($key)) {
                     if (!in_array($value, $base)) {
                         $base[] = $value;

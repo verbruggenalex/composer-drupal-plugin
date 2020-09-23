@@ -1,7 +1,6 @@
 {
   "name": "verbruggenalex/composer-drupal-plugin",
   "description": "Composer Drupal Plugin",
-  "type": "composer-plugin",
   "authors": [
     {
       "name": "Alex Verbruggen",
@@ -10,7 +9,6 @@
   ],
   "require": {
     "php": "^7.1",
-    "composer-plugin-api": "^1.1",
     "cweagans/composer-patches": "^1.6",
     "phptaskman/drupal": "^1.0"
   },
@@ -20,7 +18,6 @@
     }
   },
   "extra": {
-    "class": "VerbruggenAlex\\ComposerDrupalPlugin\\Plugin",
     "patches": {
       "phptaskman/core": [
         "https://patch-diff.githubusercontent.com/raw/php-taskman/core/pull/16.patch"
