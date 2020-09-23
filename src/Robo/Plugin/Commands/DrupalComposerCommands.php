@@ -394,6 +394,26 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
                 $name .= '/' . $name;
             }
             $name = strtolower($name);
+
+            $question = new Question('Package name (<vendor>/<name>) [<comment>' . $name . '</comment>]: ');
+            $question->setValidator(
+              function ($value) use ($name) {
+                if (null === $value) {
+                  return $name;
+                }
+
+                if (!preg_match('{^[a-z0-9_.-]+/[a-z0-9_.-]+$}D', $value)) {
+                  throw new \InvalidArgumentException(
+                    'The package name ' . $value . ' is invalid, it should be lowercase and have a vendor name, a forward slash, and a package name, matching: [a-z0-9_.-]+/[a-z0-9_.-]+'
+                  );
+                }
+
+                return $value;
+              },
+              null,
+              $name
+            );
+            $name = $this->getDialog()->ask($this->input(), $this->output(), $question);
         } else {
             if (!preg_match('{^[a-z0-9_.-]+/[a-z0-9_.-]+$}D', $name)) {
                 throw new \InvalidArgumentException(
@@ -401,25 +421,6 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
                 );
             }
         }
-
-        $question = new Question('Package name (<vendor>/<name>) [<comment>'.$name.'</comment>]: ');
-        $question->setValidator(function ($value) use ($name) {
-                if (null === $value) {
-                    return $name;
-                }
-
-                if (!preg_match('{^[a-z0-9_.-]+/[a-z0-9_.-]+$}D', $value)) {
-                    throw new \InvalidArgumentException(
-                        'The package name '.$value.' is invalid, it should be lowercase and have a vendor name, a forward slash, and a package name, matching: [a-z0-9_.-]+/[a-z0-9_.-]+'
-                    );
-                }
-
-                return $value;
-            },
-            null,
-            $name
-        );
-        $name = $this->getDialog()->ask($this->input(), $this->output(), $question);
         $this->input()->setOption('name', $name);
     }
 
