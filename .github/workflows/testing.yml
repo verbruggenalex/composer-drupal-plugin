@@ -36,5 +36,7 @@ jobs:
 
     - name: Initialize a Drupal composer.json
       run: |
-        docker-compose exec -T web /bin/sh echo $PATH
+        docker-compose exec -T web echo $PATH
+        docker-compose exec -T web /bin/sh
+        echo $PATH
 #        docker-compose exec -T -w /home/docker/.composer/composer-drupal-plugin/build web taskman drupal:init -D build --name="vendor/project" --description="Test project" --author="Alex Verbruggen <verbruggenalex@gmail.com>" -n
