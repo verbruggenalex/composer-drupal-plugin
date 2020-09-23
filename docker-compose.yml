@@ -5,7 +5,6 @@ services:
     image: verbral/php-theia:7.4
     working_dir: /home/docker/.composer/composer-drupal-plugin
     environment:
-      PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:./node_modules/.bin:./vendor/bin:~/.composer/vendor/bin:/snap/bin
       APACHE_DOCUMENT_ROOT: ${PWD}
       PHP_EXTENSION_BLACKFIRE: 1
       PHP_EXTENSION_GD: 1
