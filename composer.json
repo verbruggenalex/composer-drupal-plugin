@@ -10,18 +10,12 @@
   ],
   "require": {
     "php": "^7.1",
-    "consolidation/robo": "^2.2"
+    "consolidation/robo": "^2.2",
+    "symfony/yaml": "^5.1"
   },
   "autoload": {
     "psr-4": {
       "VerbruggenAlex\\RoboDrupal\\": "src/"
-    }
-  },
-  "extra": {
-    "patches": {
-      "phptaskman/core": [
-        "https://patch-diff.githubusercontent.com/raw/php-taskman/core/pull/16.patch"
-      ]
     }
   },
   "config": {
