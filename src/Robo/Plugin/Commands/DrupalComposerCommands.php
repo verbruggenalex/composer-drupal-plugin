@@ -2,6 +2,7 @@
 
 namespace VerbruggenAlex\RoboDrupal\Robo\Plugin\Commands;
 
+use Robo\Robo;
 use Robo\Common\ResourceExistenceChecker;
 use Robo\Contract\VerbosityThresholdInterface;
 use Symfony\Component\Console\Event\ConsoleCommandEvent;
@@ -26,7 +27,7 @@ class DrupalComposerCommands extends \Robo\Tasks
 
     public function __construct()
     {
-      \Robo\Robo::loadConfiguration([__DIR__ . '/../../../config/default.yml']);
+        Robo::loadConfiguration([__DIR__ . '/../../../config/default.yml']);
     }
 
     /**
@@ -46,8 +47,8 @@ class DrupalComposerCommands extends \Robo\Tasks
         'drupal-root' => InputOption::VALUE_OPTIONAL,
     ])
     {
-        $root = isset($options['drupal-root']) ? $options['drupal-root'] : \Robo\Robo::Config()->get('drupal.root');
-        $sites = \Robo\Robo::Config()->get('drupal.sites');
+        $root = isset($options['drupal-root']) ? $options['drupal-root'] : Robo::Config()->get('drupal.root');
+        $sites = Robo::Config()->get('drupal.sites');
         $append = "
 if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
   include \$app_root . '/' . \$site_path . '/settings.override.php';
@@ -55,9 +56,9 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
 
         foreach ($sites as $site => $location) {
             $db_name = implode('_', array_filter([
-                \Robo\Robo::Config()->get('build.type'),
+                Robo::Config()->get('build.type'),
                 $site,
-                \Robo\Robo::Config()->get('build.branch'),
+                Robo::Config()->get('build.branch'),
             ]));
             $this->getConfig()->set('drupal.database.name', $db_name);
             $arguments = [
@@ -94,9 +95,9 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
         'drupal-root' => InputOption::VALUE_OPTIONAL,
     ])
     {
-        $root = isset($options['drupal-root']) ? $options['drupal-root'] : \Robo\Robo::Config()->get('drupal.root');
-        $files = \Robo\Robo::Config()->get('drupal.files');
-        $sites = \Robo\Robo::Config()->get('drupal.sites');
+        $root = isset($options['drupal-root']) ? $options['drupal-root'] : Robo::Config()->get('drupal.root');
+        $files = Robo::Config()->get('drupal.files');
+        $sites = Robo::Config()->get('drupal.sites');
 
         $folders = ['public', 'private', 'temp', 'translations'];
         $filesystem = new Filesystem();
@@ -138,15 +139,15 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
     ])
     {
         $this->createComposerJson();
-        $this->setComposerExecutable();
-        $this->transformComposerJson();
-        // $this->normalizeComposerJson();
-        $this->composerRequireDrupal();
-        if ($this->tasks !== []) {
-            return $this
-                ->collectionBuilder()
-                ->addTaskList($this->tasks);
-        }
+        // $this->setComposerExecutable();
+        // $this->transformComposerJson();
+        // // $this->normalizeComposerJson();
+        // $this->composerRequireDrupal();
+        // if ($this->tasks !== []) {
+        //     return $this
+        //         ->collectionBuilder()
+        //         ->addTaskList($this->tasks);
+        // }
     }
 
     /**
@@ -379,10 +380,8 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
 
                     if (!preg_match('{^[a-z0-9_.-]+/[a-z0-9_.-]+$}D', $value)) {
                         throw new \InvalidArgumentException(
-                            'The package name ' . (string) $value . ' is invalid,
-                            it should be lowercase and have a vendor name, a
-                            forward slash, and a package name, matching:
-                            [a-z0-9_.-]+/[a-z0-9_.-]+'
+                            // phpcs:ignore Generic.Files.LineLength.TooLong
+                            'The package name ' . (string) $value . ' is invalid, it should be lowercase and have a vendor name, a forward slash, and a package name, matching: [a-z0-9_.-]+/[a-z0-9_.-]+'
                         );
                     }
 
@@ -393,6 +392,7 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
         } else {
             if (!preg_match('{^[a-z0-9_.-]+/[a-z0-9_.-]+$}D', $name)) {
                 throw new \InvalidArgumentException(
+                    // phpcs:ignore Generic.Files.LineLength.TooLong
                     'The package name '.$name.' is invalid, it should be lowercase and have a vendor name, a forward slash, and a package name, matching: [a-z0-9_.-]+/[a-z0-9_.-]+'
                 );
             }
@@ -404,7 +404,7 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
     {
         $this->setName();
         $this->setDescription();
-        $this->setAuthor();
+        //$this->setAuthor();
 
         $composer = [
             'name' => $this->input()->getOption('name'),
@@ -456,7 +456,7 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
         $this->checkResource('composer.json', 'file');
         $composerFile = \realpath('composer.json');
         $composerArray = json_decode(file_get_contents($composerFile), true);
-        $config = \Robo\Robo::Config()->get('composer.drupal');
+        $config = Robo::Config()->get('composer.drupal');
         $newComposerArray = $this->arrayMergeRecursiveDistinct($composerArray, $config);
         file_put_contents($composerFile, json_encode($newComposerArray, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
