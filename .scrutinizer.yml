@@ -4,6 +4,6 @@ build:
       tests:
         override:
           - php-scrutinizer-run
-          - command: phpcs-run --config phpcs.xml
+          - command: ./vendor/bin/phpcs
 checks:
     php: true
