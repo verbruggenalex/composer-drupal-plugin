@@ -2,7 +2,7 @@ name: Testing repository
 
 on:
   push:
-    branches: [ * ]
+    branches: [ '**' ]
 
 jobs:
   build:
