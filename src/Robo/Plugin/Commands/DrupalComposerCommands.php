@@ -386,7 +386,7 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
             if (!preg_match('{^[a-z0-9_.-]+/[a-z0-9_.-]+$}D', $name)) {
                 throw new \InvalidArgumentException(
                     // phpcs:ignore Generic.Files.LineLength.TooLong
-                    'The package name '.$name.' is invalid, it should be lowercase and have a vendor name, a forward slash, and a package name, matching: [a-z0-9_.-]+/[a-z0-9_.-]+'
+                    'The package name '.(string) $name.' is invalid, it should be lowercase and have a vendor name, a forward slash, and a package name, matching: [a-z0-9_.-]+/[a-z0-9_.-]+'
                 );
             }
         }
@@ -424,6 +424,7 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
     protected function composerRequireDrupal()
     {
         // Update the composer.json with drupal requirements and run update.
+        $options = '--no-update --no-progress --no-suggest --ansi';
         $require = [
             'composer/installers',
             'drupal/core',
@@ -438,8 +439,8 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
         $this->tasks[] = $this->taskExecStack()
           ->stopOnFail()
           ->executable($this->composer)
-          ->exec('require ' . implode(' ', $require) . ' --no-update')
-          ->exec('require ' . implode(' ', $requireDev) . ' --dev --no-update')
+          ->exec('require ' . implode(' ', $require) . ' ' . $options)
+          ->exec('require ' . implode(' ', $requireDev) . ' --dev ' . $options)
         //   ->exec('normalize --no-update-lock')
           ->exec('install');
     }
