@@ -1,11 +1,7 @@
 <?php
 
-namespace VerbruggenAlex\ComposerDrupalPlugin\Robo\Plugin\Commands;
+namespace VerbruggenAlex\RoboDrupal\Robo\Plugin\Commands;
 
-use PhpTaskman\Core\Robo\Plugin\Commands\AbstractCommands;
-use PhpTaskman\Core\Taskman;
-use PhpTaskman\CoreTasks\Plugin\Task\CollectionFactoryTask;
-use PhpTaskman\CoreTasks\Plugin\Task\ProcessTask;
 use Robo\Common\ResourceExistenceChecker;
 use Robo\Contract\VerbosityThresholdInterface;
 use Symfony\Component\Console\Event\ConsoleCommandEvent;
@@ -15,10 +11,9 @@ use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 
-class DrupalComposerCommands extends AbstractCommands
+class DrupalComposerCommands extends \Robo\Tasks
 {
     use ResourceExistenceChecker;
-    use \Boedah\Robo\Task\Drush\loadTasks;
 
     /** @var array */
     private $gitConfig;
@@ -28,40 +23,6 @@ class DrupalComposerCommands extends AbstractCommands
 
     /** @var string $composer */
     protected $composer;
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getConfigurationFile(): string
-    {
-        return __DIR__ . '/../../../config/commands/composer.yml';
-    }
-
-    public function getDefaultConfigurationFile(): string
-    {
-        return __DIR__ . '/../../../config/default.yml';
-    }
-
-    /**
-     * Set runtime configuration values.
-     *
-     * @param \Symfony\Component\Console\Event\ConsoleCommandEvent $event
-     *
-     * @hook command-event drupal:generate-folders
-     */
-    public function setRuntimeConfig(ConsoleCommandEvent $event)
-    {
-        // Set the build type from path if it matches pattern below.
-        $build_type = preg_match('~/build/(dev|dist)/~', getcwd(), $match) ? $match[1] : '';
-        $this->getConfig()->set('build.type', $build_type);
-
-        // Set the branch
-        $build_branch = $this->taskExec('git rev-parse --abbrev-ref HEAD')
-         ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
-         ->run()
-         ->getMessage();
-        $this->getConfig()->set('build.branch', trim($build_branch));
-    }
 
     /**
      * Generate Drupal settings.
@@ -80,8 +41,8 @@ class DrupalComposerCommands extends AbstractCommands
         'drupal-root' => InputOption::VALUE_OPTIONAL,
     ])
     {
-        $root = isset($options['drupal-root']) ? $options['drupal-root'] : $this->getConfig()->get('drupal.root');
-        $sites = $this->getConfig()->get('drupal.sites');
+        $root = isset($options['drupal-root']) ? $options['drupal-root'] : \Robo\Robo::Config()->get('drupal.root');
+        $sites = \Robo\Robo::Config()->get('drupal.sites');
         $append = "
 if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
   include \$app_root . '/' . \$site_path . '/settings.override.php';
@@ -89,9 +50,9 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
 
         foreach ($sites as $site => $location) {
             $db_name = implode('_', array_filter([
-                $this->getConfig()->get('build.type'),
+                \Robo\Robo::Config()->get('build.type'),
                 $site,
-                $this->getConfig()->get('build.branch'),
+                \Robo\Robo::Config()->get('build.branch'),
             ]));
             $this->getConfig()->set('drupal.database.name', $db_name);
             $arguments = [
@@ -128,9 +89,9 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
         'drupal-root' => InputOption::VALUE_OPTIONAL,
     ])
     {
-        $root = isset($options['drupal-root']) ? $options['drupal-root'] : $this->getConfig()->get('drupal.root');
-        $files = $this->getConfig()->get('drupal.files');
-        $sites = $this->getConfig()->get('drupal.sites');
+        $root = isset($options['drupal-root']) ? $options['drupal-root'] : \Robo\Robo::Config()->get('drupal.root');
+        $files = \Robo\Robo::Config()->get('drupal.files');
+        $sites = \Robo\Robo::Config()->get('drupal.sites');
 
         $folders = ['public', 'private', 'temp', 'translations'];
         $filesystem = new Filesystem();
@@ -490,7 +451,7 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
         $this->checkResource('composer.json', 'file');
         $composerFile = \realpath('composer.json');
         $composerArray = json_decode(file_get_contents($composerFile), true);
-        $config = $this->getConfig()->get('composer.drupal');
+        $config = \Robo\Robo::Config()->get('composer.drupal');
         $newComposerArray = $this->arrayMergeRecursiveDistinct($composerArray, $config);
         file_put_contents($composerFile, json_encode($newComposerArray, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }

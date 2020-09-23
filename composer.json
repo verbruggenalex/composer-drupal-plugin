@@ -1,6 +1,7 @@
 {
-  "name": "verbruggenalex/composer-drupal-plugin",
-  "description": "Composer Drupal Plugin",
+  "name": "verbruggenalex/robo-drupal",
+  "description": "Robo Drupal",
+  "type": "robo-tasks",
   "authors": [
     {
       "name": "Alex Verbruggen",
@@ -9,12 +10,11 @@
   ],
   "require": {
     "php": "^7.1",
-    "cweagans/composer-patches": "^1.6",
-    "phptaskman/drupal": "^1.0"
+    "consolidation/robo": "^2.2"
   },
   "autoload": {
     "psr-4": {
-      "VerbruggenAlex\\ComposerDrupalPlugin\\": "src/"
+      "VerbruggenAlex\\RoboDrupal\\": "src/"
     }
   },
   "extra": {
