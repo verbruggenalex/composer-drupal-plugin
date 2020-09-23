@@ -3,7 +3,7 @@ services:
 # ==============================================================================
   web:
     image: verbral/php-theia:7.4
-    working_dir: ${PWD}
+    working_dir: /home/docker/.composer/composer-drupal-plugin
     environment:
       APACHE_DOCUMENT_ROOT: ${PWD}
       PHP_EXTENSION_BLACKFIRE: 1
@@ -16,10 +16,9 @@ services:
       GIT_USER_EMAIL:
     working_dir: ${PWD}
     volumes:
-      - ${PWD}:${PWD}
-      - ${PWD}/files:/files
       - ~/.ssh:/home/docker/.ssh
-      - ~/.composer:/home/docker/.composer
+      - ${PWD}/src/resources/composer.global.json:/home/docker/.composer/composer.json
+      - ${PWD}:/home/docker/.composer/composer-drupal-plugin
     depends_on:
       - mysql
     ports:

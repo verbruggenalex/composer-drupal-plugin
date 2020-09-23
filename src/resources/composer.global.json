@@ -1,0 +1,12 @@
+{
+  "require": {
+    "verbruggenalex/composer-drupal-plugin": "@dev"
+  },
+  "minimum-stability": "dev",
+  "repositories": [
+    {
+      "type": "path",
+      "url": "/home/docker/.composer/composer-drupal-plugin"
+    }
+  ]
+}
