@@ -32,11 +32,8 @@ jobs:
 
     - name: Composer install
       run: |
-        docker-compose exec -T web composer global update
+        docker-compose exec -T web composer install
 
     - name: Initialize a Drupal composer.json
       run: |
-        docker-compose exec -T web echo $PATH
-        docker-compose exec -T web /bin/sh
-        echo $PATH
-#        docker-compose exec -T -w /home/docker/.composer/composer-drupal-plugin/build web taskman drupal:init -D build --name="vendor/project" --description="Test project" --author="Alex Verbruggen <verbruggenalex@gmail.com>" -n
+        docker-compose exec -T -w ${PWD}/build web ../vendor/bin/taskman drupal:init --name="vendor/project" --description="Test project" --author="Alex Verbruggen <verbruggenalex@gmail.com>" -n
