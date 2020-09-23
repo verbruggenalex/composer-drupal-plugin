@@ -23,10 +23,10 @@ class DrupalComposerCommands extends AbstractCommands
     /** @var array */
     private $gitConfig;
 
-	/** @var array $tasks */
+    /** @var array $tasks */
     protected $tasks = [];
 
-	/** @var string $composer */
+    /** @var string $composer */
     protected $composer;
 
     /**
@@ -250,10 +250,10 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
             ->exec("$drush sql-cli < $dumpfile")
             ->exec("./vendor/bin/taskman build:deploy")
             ->run();
-
     }
 
-    protected function setAuthor() {
+    protected function setAuthor()
+    {
         $git = $this->getGitConfig();
         if (null === $author = $this->input()->getOption('author')) {
             if (!empty($_SERVER['COMPOSER_DEFAULT_AUTHOR'])) {
@@ -276,15 +276,14 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
         $self = $this;
         $question = new Question('Author [<comment>'.$author.'</comment>, n to skip]: ');
         $question->setValidator(function ($value) use ($self, $author) {
-                if ($value === 'n' || $value === 'no') {
-                    return;
-                }
+            if ($value === 'n' || $value === 'no') {
+                return;
+            }
                 $value = (string) $value ?: $author;
                 $author = $self->parseAuthorString($value);
 
                 return sprintf('%s <%s>', $author['name'], $author['email']);
-            }
-        );
+        });
 
         $author = $this->getDialog()->ask($this->input(), $this->output(), $question);
         $this->input()->setOption('author', $author);
@@ -357,18 +356,22 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
         return $this->gitConfig = array();
     }
 
-    protected function setDescription() {
-        $description = (string) $this->input()->getOption('description') ?: false;
+    protected function setDescription()
+    {
+        $description = $this->input()->getOption('description') ?: false;
         $description = $this->getDialog()->ask(
             $this->input(),
             $this->output(),
-            new Question('Description [<comment>'.$description.'</comment>]: ',
-            $description)
+            new Question(
+                'Description [<comment>'.(string) $description.'</comment>]: ',
+                $description
+            )
         );
         $this->input()->setOption('description', $description);
     }
 
-    protected function setName() {
+    protected function setName()
+    {
         $cwd = realpath(".");
         $git = $this->getGitConfig();
 
@@ -394,19 +397,19 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
 
             $question = new Question('Package name (<vendor>/<name>) [<comment>' . $name . '</comment>]: ');
             $question->setValidator(
-              function ($value) use ($name) {
-                if (null === $value) {
-                  return $name;
-                }
+                function ($value) use ($name) {
+                    if (null === $value) {
+                        return $name;
+                    }
 
-                if (!preg_match('{^[a-z0-9_.-]+/[a-z0-9_.-]+$}D', $value)) {
-                  throw new \InvalidArgumentException(
-                    'The package name ' . (string) $value . ' is invalid, it should be lowercase and have a vendor name, a forward slash, and a package name, matching: [a-z0-9_.-]+/[a-z0-9_.-]+'
-                  );
-                }
+                    if (!preg_match('{^[a-z0-9_.-]+/[a-z0-9_.-]+$}D', $value)) {
+                        throw new \InvalidArgumentException(
+                            'The package name ' . (string) $value . ' is invalid, it should be lowercase and have a vendor name, a forward slash, and a package name, matching: [a-z0-9_.-]+/[a-z0-9_.-]+'
+                        );
+                    }
 
-                return $value;
-              }
+                    return $value;
+                }
             );
             $name = $this->getDialog()->ask($this->input(), $this->output(), $question);
         } else {
@@ -436,7 +439,8 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
         }
     }
 
-    protected function setComposerExecutable() {
+    protected function setComposerExecutable()
+    {
         // Find Composer
         $composer = $this->taskExec('which composer')
          ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
@@ -446,7 +450,8 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
         $this->composer = trim($composer);
     }
 
-    protected function composerRequireDrupal() {
+    protected function composerRequireDrupal()
+    {
         // Update the composer.json with drupal requirements and run update.
         $this->tasks[] = $this->taskExecStack()
           ->stopOnFail()
@@ -457,10 +462,11 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
           ->exec('install');
     }
 
-    protected function transformComposerJson() {
+    protected function transformComposerJson()
+    {
         $this->checkResource('composer.json', 'file');
         $composerFile = \realpath('composer.json');
-        $composerArray = json_decode(file_get_contents($composerFile), TRUE);
+        $composerArray = json_decode(file_get_contents($composerFile), true);
         $config = $this->getConfig()->get('composer.drupal');
         $newComposerArray = $this->array_merge_recursive_distinct($composerArray, $config);
         file_put_contents($composerFile, json_encode($newComposerArray, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -480,27 +486,33 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
     //      ->exec('normalize --quiet');
     // }
 
-    protected function array_merge_recursive_distinct () {
-      $arrays = func_get_args();
-      $base = array_shift($arrays);
-      if(!is_array($base)) $base = empty($base) ? array() : array($base);
-      foreach($arrays as $append) {
-        if(!is_array($append)) $append = array($append);
-        foreach($append as $key => $value) {
-          if(!array_key_exists($key, $base) and !is_numeric($key)) {
-            $base[$key] = $append[$key];
-            continue;
-          }
-          if(is_array($value) or is_array($base[$key])) {
-            $base[$key] = $this->array_merge_recursive_distinct($base[$key], $append[$key]);
-          } else if(is_numeric($key)) {
-            if(!in_array($value, $base)) $base[] = $value;
-          } else {
-            $base[$key] = $value;
-          }
+    protected function array_merge_recursive_distinct()
+    {
+        $arrays = func_get_args();
+        $base = array_shift($arrays);
+        if (!is_array($base)) {
+            $base = empty($base) ? array() : array($base);
         }
-      }
-      return $base;
+        foreach ($arrays as $append) {
+            if (!is_array($append)) {
+                $append = array($append);
+            }
+            foreach ($append as $key => $value) {
+                if (!array_key_exists($key, $base) and !is_numeric($key)) {
+                    $base[$key] = $append[$key];
+                    continue;
+                }
+                if (is_array($value) or is_array($base[$key])) {
+                    $base[$key] = $this->array_merge_recursive_distinct($base[$key], $append[$key]);
+                } elseif (is_numeric($key)) {
+                    if (!in_array($value, $base)) {
+                        $base[] = $value;
+                    }
+                } else {
+                    $base[$key] = $value;
+                }
+            }
+        }
+        return $base;
     }
-
 }

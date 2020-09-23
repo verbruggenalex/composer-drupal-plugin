@@ -73,7 +73,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface, Capable
                 ['onInit'],
             InstallerEvents::PRE_DEPENDENCIES_SOLVING =>
                 ['onDependencySolve'],
-            ScriptEvents::POST_INSTALL_CMD => 
+            ScriptEvents::POST_INSTALL_CMD =>
                 ['onPostInstallOrUpdate'],
             ScriptEvents::POST_UPDATE_CMD =>
                 ['onPostInstallOrUpdate'],
