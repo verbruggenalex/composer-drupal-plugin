@@ -424,7 +424,6 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
     protected function composerRequireDrupal()
     {
         // Update the composer.json with drupal requirements and run update.
-        $options = '--no-update --no-progress --no-suggest --ansi';
         $require = [
             'composer/installers',
             'drupal/core',
@@ -439,10 +438,10 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
         $this->tasks[] = $this->taskExecStack()
           ->stopOnFail()
           ->executable($this->composer)
-          ->exec('require ' . implode(' ', $require) . ' ' . $options)
-          ->exec('require ' . implode(' ', $requireDev) . ' --dev ' . $options)
+          ->exec('require ' . implode(' ', $require) . ' --no-update --ansi')
+          ->exec('require ' . implode(' ', $requireDev) . ' --dev --no-update --ansi')
         //   ->exec('normalize --no-update-lock')
-          ->exec('install');
+          ->exec('install --no-progress --no-suggest --ansi');
     }
 
     protected function transformComposerJson()
