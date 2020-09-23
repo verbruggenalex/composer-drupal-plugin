@@ -18,8 +18,8 @@ services:
       - ~/.ssh:/home/docker/.ssh
       - ${PWD}/src/resources/composer.global.json:/home/docker/.composer/composer.json
       - ${PWD}:/home/docker/.composer/composer-drupal-plugin
-    depends_on:
-      - mysql
+#    depends_on:
+#      - mysql
     ports:
       - 81:80
       - 3000:3000
