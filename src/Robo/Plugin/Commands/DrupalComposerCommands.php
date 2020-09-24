@@ -30,91 +30,6 @@ class DrupalComposerCommands extends \Robo\Tasks
     }
 
     /**
-     * Generate Drupal settings.
-     *
-     * @param array $options
-     *   Command options.
-     *
-     * @return \Robo\Collection\CollectionBuilder
-     *   Collection builder.
-     *
-     * @command drupal:generate-settings
-     *
-     * @option drupal-root  The root directory for Drupal.
-     */
-    public function drupalGenerateSettings(array $options = [
-        'drupal-root' => InputOption::VALUE_OPTIONAL,
-    ])
-    {
-        $root = isset($options['drupal-root']) ? $options['drupal-root'] : Robo::Config()->get('drupal.root');
-        $sites = Robo::Config()->get('drupal.sites');
-        $append = "
-if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
-  include \$app_root . '/' . \$site_path . '/settings.override.php';
-}";
-
-        foreach ($sites as $site) {
-            $db_name = implode('_', array_filter([
-                Robo::Config()->get('build.type'),
-                $site,
-                Robo::Config()->get('build.branch'),
-            ]));
-            Robo::Config()->set('drupal.database.name', $db_name);
-            $arguments = [
-                'from' => 'vendor/verbruggenalex/composer-drupal-plugin/src/resources/settings.php',
-                'to' => $root . '/sites/' . $site . '/settings.override.php',
-            ];
-            $this->task(ProcessTask::class)->setTaskArguments($arguments)->run();
-            $this->taskFilesystemStack()->copy(
-                getcwd() . '/' . $root . '/sites/default/default.settings.php',
-                getcwd() . '/' . $root . '/sites/' . $site . '/settings.php',
-                true
-            )->run();
-            $this->taskWriteToFile(getcwd() . '/' . $root . '/sites/' . $site . '/settings.php')
-              ->append()
-              ->lines([$append])
-              ->run();
-        }
-    }
-
-    /**
-     * Generate Drupal folders.
-     *
-     * @param array $options
-     *   Command options.
-     *
-     * @return \Robo\Collection\CollectionBuilder
-     *   Collection builder.
-     *
-     * @command drupal:generate-folders
-     *
-     * @option drupal-root  The root directory for Drupal.
-     */
-    public function drupalGenerateFolders(array $options = [
-        'drupal-root' => InputOption::VALUE_OPTIONAL,
-    ])
-    {
-        $root = isset($options['drupal-root']) ? $options['drupal-root'] : Robo::Config()->get('drupal.root');
-        $files = Robo::Config()->get('drupal.files');
-        $sites = Robo::Config()->get('drupal.sites');
-
-        $folders = ['public', 'private', 'temp', 'translations'];
-        $filesystem = new Filesystem();
-        $filesystem->mkdir(getcwd() . '/config');
-        foreach ($sites as $site) {
-            foreach ($folders as $folder) {
-                $fullPath = $files . '/' . $site . '/files/' . $folder;
-                $fullPathWeb = getcwd() . '/' . $root . '/sites/' . $site . '/files/' . $folder;
-                $filesystem->mkdir($fullPath, 0700);
-                if ($folder === 'public') {
-                    $filesystem->symlink($fullPath, $fullPathWeb);
-                }
-            }
-        }
-        $this->drupalGenerateSettings($options);
-    }
-
-    /**
      * Create a Drupal composer.json.
      *
      * @param array $options
@@ -147,84 +62,6 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
                 ->collectionBuilder()
                 ->addTaskList($this->tasks);
         }
-    }
-
-    /**
-     * Build a development codebase.
-     *
-     * @param array $options
-     *   Command options.
-     *
-     * @return \Robo\Collection\CollectionBuilder
-     *   Collection builder.
-     *
-     * @command drupal:build-dev
-     *
-     * @option branch       The branch name.
-     */
-    public function drupalBuildDev(array $options = [
-        'branch' =>  InputOption::VALUE_OPTIONAL,
-    ])
-    {
-        $branch = $this->taskExec('git rev-parse --abbrev-ref HEAD')
-         ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
-         ->run()
-         ->getMessage();
-
-        $branch = isset($options['branch']) ? $options['branch'] : trim($branch);
-        $buildPath = "build/dev/$branch";
-        $this->_exec("mkdir -p $buildPath");
-        $this->taskRsync()
-          ->fromPath('./')
-          ->toPath($buildPath)
-          ->filter(':- .gitignore')
-          ->recursive()
-          ->run();
-        $this->taskComposerInstall()
-          ->workingDir($buildPath)
-          ->run();
-        $this->taskExec('./vendor/bin/drush site-install standard -y -r web --account-pass=admin')
-          ->dir($buildPath)
-          ->run();
-    }
-
-    /**
-     * Deploy from one build to another.
-     *
-     * @param array $options
-     *   Command options.
-     *
-     * @return \Robo\Collection\CollectionBuilder
-     *   Collection builder.
-     *
-     * @command deploy:build
-     *
-     * @option from     The path from which you want to deploy.
-     * @option to       The path to which you want to deploy.
-     */
-    public function deployBuild(array $options = [
-        'from' =>  InputOption::VALUE_REQUIRED,
-        'to' =>  InputOption::VALUE_REQUIRED,
-    ])
-    {
-        $from = $options['from'];
-        $to = $options['to'];
-        $drush = './vendor/bin/drush';
-        $dumpfile = getcwd() . '/dump.sql';
-
-        // @TODO: Validation of the presence of both paths.
-
-        // @TODO: Validation on site status of from.
-        $this->taskExecStack()
-            ->stopOnFail()
-            ->dir($from)
-            ->exec("$drush sql-dump --result-file=$dumpfile")
-            ->dir($to)
-            ->exec("$drush sql-create -y")
-            ->exec("$drush sql-drop -y")
-            ->exec("$drush sql-cli < $dumpfile")
-            ->exec("./vendor/bin/taskman build:deploy")
-            ->run();
     }
 
     protected function setAuthor()
@@ -439,9 +276,9 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
           ->stopOnFail()
           ->executable($this->composer)
           ->exec('require ' . implode(' ', $require) . ' --no-update --ansi')
-          ->exec('require ' . implode(' ', $requireDev) . ' --dev --no-update --ansi')
+          ->exec('require ' . implode(' ', $requireDev) . ' --dev --no-update --ansi');
         //   ->exec('normalize --no-update-lock')
-          ->exec('install --no-progress --no-suggest --ansi');
+        // ->exec('install --no-progress --no-suggest --ansi');
     }
 
     protected function transformComposerJson()
