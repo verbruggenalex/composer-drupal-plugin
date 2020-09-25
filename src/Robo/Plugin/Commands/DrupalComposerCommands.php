@@ -5,6 +5,7 @@ namespace VerbruggenAlex\RoboDrupal\Robo\Plugin\Commands;
 use Robo\Robo;
 use Robo\Common\ResourceExistenceChecker;
 use Robo\Contract\VerbosityThresholdInterface;
+use Symfony\Component\Console\Event\ConsoleCommandEvent;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Question\ChoiceQuestion;
@@ -29,6 +30,17 @@ class DrupalComposerCommands extends \Robo\Tasks
     public function __construct()
     {
         Robo::loadConfiguration([__DIR__ . '/../../../config/default.yml']);
+    }
+
+  /**
+   * Set runtime configuration values.
+   *
+   * @param \Symfony\Component\Console\Event\ConsoleCommandEvent $event
+   *
+   * @hook command-event drupal:extend
+   */
+    public function setRuntimeConfig(ConsoleCommandEvent $event)
+    {
         $this->setComposerExecutable();
     }
 
@@ -55,7 +67,8 @@ class DrupalComposerCommands extends \Robo\Tasks
         if (!file_exists(getcwd() . '/composer.json')) {
             // phpcs:ignore Generic.Files.LineLength.TooLong
             $question = new ConfirmationQuestion('No composer.json in current directory. Would you like to generate one? <comment>(y/n)</comment> ', false);
-            if ($this->getDialog()->ask($this->input(), $this->output(), $question) || $this->input()->getOption('no-interaction')) {
+            if ($this->getDialog()->ask($this->input(), $this->output(), $question) ||
+                $this->input()->getOption('no-interaction')) {
                 $requirements = array_merge($list['core']['require'], $list['core']['require-dev']);
                 foreach ($requirements as $requirement) {
                     $composerJson = $libDir . '/' . $requirement . '/composer.json';
