@@ -29,40 +29,7 @@ class DrupalComposerCommands extends \Robo\Tasks
     public function __construct()
     {
         Robo::loadConfiguration([__DIR__ . '/../../../config/default.yml']);
-    }
-
-  /**
-   * Create a Drupal composer.json.
-   *
-   * @param array $options
-   *   Command options.
-   *
-   * @return \Robo\Collection\CollectionBuilder
-   *   Collection builder.
-   *
-   * @command drupal:init
-   *
-   * @option name         The project name.
-   * @option description  The description of the project.
-   * @option author       The author of the project.
-   * @option drupal-root  The root directory for Drupal.
-   */
-    public function drupalInit(/** @scrutinizer ignore-unused */ array $options = [
-      'name' =>  InputOption::VALUE_OPTIONAL,
-      'description' => InputOption::VALUE_OPTIONAL,
-      'author' => InputOption::VALUE_OPTIONAL,
-      'drupal-root' => InputOption::VALUE_OPTIONAL,
-    ])
-    {
-        $this->createComposerJson();
         $this->setComposerExecutable();
-      // $this->normalizeComposerJson();
-        $this->composerRequireDrupal();
-        if ($this->tasks !== []) {
-            return $this
-            ->collectionBuilder()
-            ->addTaskList($this->tasks);
-        }
     }
 
   /**
@@ -81,15 +48,14 @@ class DrupalComposerCommands extends \Robo\Tasks
       'description' => InputOption::VALUE_OPTIONAL,
     ])
     {
+        $composer = [];
         $list = Robo::Config()->get('list');
         $libDir = __DIR__ . '/../../../../lib';
-        $this->setComposerExecutable();
 
         if (!file_exists(getcwd() . '/composer.json')) {
             // phpcs:ignore Generic.Files.LineLength.TooLong
             $question = new ConfirmationQuestion('No composer.json in current directory. Would you like to generate one? <comment>(y/n)</comment> ', false);
             if ($this->getDialog()->ask($this->input(), $this->output(), $question) || $this->input()->getOption('no-interaction')) {
-                $composer = [];
                 $requirements = array_merge($list['core']['require'], $list['core']['require-dev']);
                 foreach ($requirements as $requirement) {
                     $composerJson = $libDir . '/' . $requirement . '/composer.json';
