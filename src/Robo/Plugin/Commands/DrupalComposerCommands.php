@@ -41,6 +41,7 @@ class DrupalComposerCommands extends \Robo\Tasks
    */
     public function setRuntimeConfig(ConsoleCommandEvent $event)
     {
+        $this->setGitConfig();
         $this->setComposerExecutable();
     }
 
@@ -103,81 +104,7 @@ class DrupalComposerCommands extends \Robo\Tasks
         // $this->output->writeln('You have just selected: ' . implode(', ', $colors));
     }
 
-    protected function setAuthor()
-    {
-        $git = $this->getGitConfig();
-        if (null === $author = $this->input()->getOption('author')) {
-            if (!empty($_SERVER['COMPOSER_DEFAULT_AUTHOR'])) {
-                $author_name = $_SERVER['COMPOSER_DEFAULT_AUTHOR'];
-            } elseif (isset($git['user.name'])) {
-                $author_name = $git['user.name'];
-            }
-
-            if (!empty($_SERVER['COMPOSER_DEFAULT_EMAIL'])) {
-                $author_email = $_SERVER['COMPOSER_DEFAULT_EMAIL'];
-            } elseif (isset($git['user.email'])) {
-                $author_email = $git['user.email'];
-            }
-
-            if (isset($author_name) && isset($author_email)) {
-                $author = sprintf('%s <%s>', $author_name, $author_email);
-            }
-        }
-
-        $self = $this;
-        $question = new Question('Author [<comment>' . $author . '</comment>, n to skip]: ');
-        $question->setValidator(function ($value) use ($self, $author) {
-            if ($value === 'n' || $value === 'no') {
-                return;
-            }
-            $value = $value ?: $author;
-            $author = $self->parseAuthorString((string) $value);
-
-            return sprintf('%s <%s>', $author['name'], $author['email']);
-        });
-
-        $author = $this->getDialog()->ask($this->input(), $this->output(), $question);
-        $this->input()->setOption('author', $author);
-    }
-
-  /**
-   * @private
-   * @param  string $author
-   * @return array
-   */
-    public function parseAuthorString($author)
-    {
-        if (preg_match('/^(?P<name>[- .,\p{L}\p{N}\p{Mn}\'’"()]+) <(?P<email>.+?)>$/u', $author, $match)) {
-            if ($this->isValidEmail($match['email'])) {
-                return array(
-                'name' => trim($match['name']),
-                'email' => $match['email'],
-                );
-            }
-        }
-
-        throw new \InvalidArgumentException(
-            'Invalid author string.  Must be in the format: ' .
-            'John Smith <john@example.com>'
-        );
-    }
-
-    protected function isValidEmail($email)
-    {
-      // assume it's valid if we can't validate it
-        if (!function_exists('filter_var')) {
-            return true;
-        }
-
-      // php <5.3.3 has a very broken email validator, so bypass checks
-        if (PHP_VERSION_ID < 50303) {
-            return true;
-        }
-
-        return false !== filter_var($email, FILTER_VALIDATE_EMAIL);
-    }
-
-    protected function getGitConfig()
+    protected function setGitConfig()
     {
         if (null !== $this->gitConfig) {
             return $this->gitConfig;
@@ -220,7 +147,6 @@ class DrupalComposerCommands extends \Robo\Tasks
     protected function setName()
     {
         $cwd = realpath(".");
-        $git = $this->getGitConfig();
 
         if (!$name = $this->input()->getOption('name')) {
             $name = basename($cwd);
@@ -228,8 +154,8 @@ class DrupalComposerCommands extends \Robo\Tasks
             $name = strtolower($name);
             if (!empty($_SERVER['COMPOSER_DEFAULT_VENDOR'])) {
                 $name = $_SERVER['COMPOSER_DEFAULT_VENDOR'] . '/' . $name;
-            } elseif (isset($git['github.user'])) {
-                $name = $git['github.user'] . '/' . $name;
+            } elseif (isset($this->gitConfig['github.user'])) {
+                $name = $this->gitConfig['github.user'] . '/' . $name;
             } elseif (!empty($_SERVER['USERNAME'])) {
                 $name = $_SERVER['USERNAME'] . '/' . $name;
             } elseif (!empty($_SERVER['USER'])) {
@@ -295,51 +221,12 @@ class DrupalComposerCommands extends \Robo\Tasks
 
     protected function setComposerExecutable()
     {
-      // Find Composer
         $composer = $this->taskExec('which composer')
         ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
         ->run()
         ->getMessage();
-
         $this->composer = trim($composer);
     }
-
-    protected function composerRequireDrupal()
-    {
-      // Update the composer.json with drupal requirements and run update.
-        $require = [
-        'composer/installers',
-        'drupal/core',
-        'drupal/core-composer-scaffold',
-        'drush/drush',
-        ];
-        $requireDev = [
-        'drupal-composer/drupal-security-advisories:dev-8.x-v2',
-        'drupal/core-dev',
-        'ergebnis/composer-normalize',
-        ];
-        $this->tasks[] = $this->taskExecStack()
-        ->stopOnFail()
-        ->executable($this->composer)
-        ->exec('require ' . implode(' ', $require) . ' --no-update --ansi')
-        ->exec('require ' . implode(' ', $requireDev) . ' --dev --no-update --ansi');
-      //   ->exec('normalize --no-update-lock')
-      // ->exec('install --no-progress --no-suggest --ansi');
-    }
-
-  // protected function normalizeComposerJson() {
-  //     // First remove composer.lock silently because normalize will trip that
-  //     // the lock file is out of date.
-  //     $this->taskExec("rm -f composer.lock")
-  //       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
-  //       ->run();
-  //     // Install and execute composer normalize
-  //     $this->tasks[] = $this->taskExecStack()
-  //      ->stopOnFail()
-  //      ->executable($this->composer)
-  //      ->exec('global require ergebnis/composer-normalize --quiet')
-  //      ->exec('normalize --quiet');
-  // }
 
     protected function arrayMergeRecursiveDistinct()
     {
