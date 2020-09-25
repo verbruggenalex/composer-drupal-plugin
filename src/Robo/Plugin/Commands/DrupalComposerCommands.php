@@ -88,7 +88,7 @@ class DrupalComposerCommands extends \Robo\Tasks
         if (!file_exists(getcwd() . '/composer.json')) {
             // phpcs:ignore Generic.Files.LineLength.TooLong
             $question = new ConfirmationQuestion('No composer.json in current directory. Would you like to generate one? <comment>(y/n)</comment> ', false);
-            if ($this->getDialog()->ask($this->input(), $this->output(), $question)) {
+            if ($this->getDialog()->ask($this->input(), $this->output(), $question) || $this->input()->getOption('no-interaction')) {
                 $composer = [];
                 $requirements = array_merge($list['core']['require'], $list['core']['require-dev']);
                 foreach ($requirements as $requirement) {
