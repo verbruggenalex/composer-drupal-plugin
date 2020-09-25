@@ -55,3 +55,22 @@ composer:
           - type:drupal-console-language
         config/{$name}/sync:
           - type:drupal-config
+
+list:
+  core:
+    require:
+      - composer/installers
+      - cweagans/composer-patches
+      - drupal/core
+      - drupal/core-composer-scaffold
+      - drush/drush
+    require-dev:
+      - drupal-composer/drupal-security-advisories:dev-8.x-v2
+      - drupal/core-dev
+      - ergebnis/composer-normalize
+  devel:
+    require-dev:
+      - drupal/coder
+      - drupal/console
+      - drupal/devel
+      - drupal/drupal-extension

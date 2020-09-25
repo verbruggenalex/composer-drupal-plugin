@@ -1,0 +1,12 @@
+{
+  "extra": {
+    "drupal-scaffold": {
+      "allowed-packages": [
+        "drupal/core"
+      ],
+      "locations": {
+        "web-root": "./web"
+      }
+    }
+  }
+}
