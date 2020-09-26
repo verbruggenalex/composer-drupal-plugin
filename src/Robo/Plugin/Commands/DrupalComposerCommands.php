@@ -130,16 +130,17 @@ class DrupalComposerCommands extends \Robo\Tasks
 
     protected function setDescription()
     {
-        $description = $this->input()->getOption('description') ?: false;
-        $description = $this->getDialog()->ask(
-            $this->input(),
-            $this->output(),
-            new Question(
-                'Description [<comment>' . (string) $description . '</comment>]: ',
-                $description
-            )
-        );
-        $this->input()->setOption('description', $description);
+        if (!$description = $this->input()->getOption('description') ?: false) {
+            $description = $this->getDialog()->ask(
+                $this->input(),
+                $this->output(),
+                new Question(
+                    'Description [<comment>' . (string) $description . '</comment>]: ',
+                    $description
+                )
+            );
+            $this->input()->setOption('description', $description);
+        }
 
         return $description;
     }
@@ -174,31 +175,29 @@ class DrupalComposerCommands extends \Robo\Tasks
                     if (null === $value) {
                         return $name;
                     }
-
-                    if (!preg_match('{^[a-z0-9_.-]+/[a-z0-9_.-]+$}D', $value)) {
-                        throw new \InvalidArgumentException(
-                        // phpcs:ignore Generic.Files.LineLength.TooLong
-                            'The package name ' . (string) $value . ' is invalid, it should be lowercase and have a vendor name, a forward slash, and a package name, matching: [a-z0-9_.-]+/[a-z0-9_.-]+'
-                        );
-                    }
+                    $this->validateName($value);
 
                     return $value;
                 }
             );
             $name = $this->getDialog()->ask($this->input(), $this->output(), $question);
         } else {
-            if (!preg_match('{^[a-z0-9_.-]+/[a-z0-9_.-]+$}D', $name)) {
-                throw new \InvalidArgumentException(
-                // phpcs:ignore Generic.Files.LineLength.TooLong
-                    'The package name ' . (string) $name . ' is invalid, it should be lowercase and have a vendor name, a forward slash, and a package name, matching: [a-z0-9_.-]+/[a-z0-9_.-]+'
-                );
-            }
+            $this->validateName($name);
         }
         $this->input()->setOption('name', $name);
 
         return $name;
     }
 
+    protected function validateName($name)
+    {
+        if (!preg_match('{^[a-z0-9_.-]+/[a-z0-9_.-]+$}D', $name)) {
+            throw new \InvalidArgumentException(
+            // phpcs:ignore Generic.Files.LineLength.TooLong
+                'The package name ' . (string) $name . ' is invalid, it should be lowercase and have a vendor name, a forward slash, and a package name, matching: [a-z0-9_.-]+/[a-z0-9_.-]+'
+            );
+        }
+    }
 
     public function createComposerJson($composer)
     {
