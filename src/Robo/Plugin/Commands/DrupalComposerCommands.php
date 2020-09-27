@@ -82,10 +82,8 @@ class DrupalComposerCommands extends \Robo\Tasks
             foreach ($list[$group] as $requirementType => $requirements) {
                 $composerReqs[$requirementType] = array_merge($composerReqs[$requirementType], $requirements);
                 foreach ($requirements as $requirement) {
-                  // @todo: possibly need to allow for different versioned
-                  // composer.json files through having another subfolder or so.
-                    $versionlessRequirement = strtok($requirement, ':');
-                    $composerJson = $libDir . '/' . $versionlessRequirement . '/composer.json';
+                    $packagePath = str_replace(':', '/', $requirement);
+                    $composerJson = $libDir . '/' . $packagePath . '/composer.json';
                     if (file_exists($composerJson)) {
                         $composerJsonArray = json_decode(file_get_contents($composerJson), true);
                         $composer = $this->arrayMergeRecursiveDistinct($composer, $composerJsonArray);
