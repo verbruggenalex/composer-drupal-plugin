@@ -1,0 +1,9 @@
+{
+  "extra": {
+    "patches": {
+      "drupal/toolbar_themes": [
+        "https://www.drupal.org/files/issues/2018-12-08/toolbar_themes-padding-issue-2981847-7.patch"
+      ]
+    }
+  }
+}

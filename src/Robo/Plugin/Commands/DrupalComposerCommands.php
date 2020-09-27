@@ -9,8 +9,6 @@ use Symfony\Component\Console\Event\ConsoleCommandEvent;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Question\ChoiceQuestion;
-use Symfony\Component\Console\Question\ConfirmationQuestion;
-use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 
@@ -61,47 +59,53 @@ class DrupalComposerCommands extends \Robo\Tasks
       'description' => InputOption::VALUE_OPTIONAL,
     ])
     {
-        $composer = [];
         $list = Robo::Config()->get('list');
         $libDir = __DIR__ . '/../../../../lib';
+        $composer = file_exists('composer.json') ? json_decode(file_get_contents('composer.json'), true) : [];
+        $composerReqs = [
+          'require' => [],
+          'require-dev' => [],
+        ];
 
-        if (!file_exists(getcwd() . '/composer.json')) {
-            // phpcs:ignore Generic.Files.LineLength.TooLong
-            $question = new ConfirmationQuestion('No composer.json in current directory. Would you like to generate one? <comment>(y/n)</comment> ', false);
-            if ($this->getDialog()->ask($this->input(), $this->output(), $question) ||
-                $this->input()->getOption('no-interaction')) {
-                $requirements = array_merge($list['core']['require'], $list['core']['require-dev']);
+        $options = array_keys($list);
+        $question = new ChoiceQuestion(
+            'Please select the packages you want to install.',
+            $options,
+            implode(',', array_keys($options)),
+        );
+        $question->setMultiselect(true);
+
+        $selection = $this->getDialog()->ask($this->input, $this->output, $question);
+        $this->output->writeln('You have just selected: ' . implode(', ', $selection));
+
+        foreach ($selection as $group) {
+            foreach ($list[$group] as $requirementType => $requirements) {
+                $composerReqs[$requirementType] = array_merge($composerReqs[$requirementType], $requirements);
                 foreach ($requirements as $requirement) {
-                    $composerJson = $libDir . '/' . $requirement . '/composer.json';
+                  // @todo: possibly need to allow for different versioned
+                  // composer.json files through having another subfolder or so.
+                    $versionlessRequirement = strtok($requirement, ':');
+                    $composerJson = $libDir . '/' . $versionlessRequirement . '/composer.json';
                     if (file_exists($composerJson)) {
                         $composerJsonArray = json_decode(file_get_contents($composerJson), true);
                         $composer = $this->arrayMergeRecursiveDistinct($composer, $composerJsonArray);
                     }
                 }
             }
-            $this->createComposerJson($composer);
-            $this->tasks[] = $this->taskExecStack()
-            ->stopOnFail()
-              ->executable($this->composer)
-              ->exec('require ' . implode(' ', $list['core']['require']) . ' --no-update --ansi')
-              ->exec('require ' . implode(' ', $list['core']['require-dev']) . ' --dev --no-update --ansi');
         }
+
+        $this->updateComposerJson($composer);
+        $this->tasks[] = $this->taskExecStack()
+        ->stopOnFail()
+          ->executable($this->composer)
+          ->exec('require ' . implode(' ', $composerReqs['require']) . ' --no-update --ansi')
+          ->exec('require ' . implode(' ', $composerReqs['require-dev']) . ' --dev --no-update --ansi');
 
         if ($this->tasks !== []) {
             return $this
             ->collectionBuilder()
             ->addTaskList($this->tasks);
         }
-
-        // $question = new ChoiceQuestion(
-        //   'Please select your favorite colors (defaults to red and blue)',
-        //   ['red', 'blue', 'yellow'],
-        //   '0,1'
-        // );
-        // $question->setMultiselect(true);
-
-        // $colors = $this->getDialog()->ask($this->input, $this->output, $question);
-        // $this->output->writeln('You have just selected: ' . implode(', ', $colors));
     }
 
     protected function setGitConfig()
@@ -199,7 +203,7 @@ class DrupalComposerCommands extends \Robo\Tasks
         }
     }
 
-    public function createComposerJson($composer)
+    public function updateComposerJson($composer)
     {
         if (!array_key_exists('name', $composer)) {
             $composer['name'] = $this->setName();
@@ -209,13 +213,8 @@ class DrupalComposerCommands extends \Robo\Tasks
             $composer['description'] = $this->setDescription();
         }
 
-        if (!file_exists('composer.json')) {
-            $json = json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-            file_put_contents('composer.json', $json);
-            return $composer;
-        }
-
-        return false;
+        $json = json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        file_put_contents('composer.json', $json);
     }
 
     protected function setComposerExecutable()
