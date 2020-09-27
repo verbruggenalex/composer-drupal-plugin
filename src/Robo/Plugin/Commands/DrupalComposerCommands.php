@@ -203,12 +203,24 @@ class DrupalComposerCommands extends \Robo\Tasks
 
     public function updateComposerJson($composer)
     {
+        // Set project name if it is not set yet.
         if (!array_key_exists('name', $composer)) {
             $composer['name'] = $this->setName();
         }
 
+        // Set project description if it is not set yet.
         if (!array_key_exists('description', $composer)) {
             $composer['description'] = $this->setDescription();
+        }
+
+        // Check if we need to create directories for local repository paths.
+        if (array_key_exists('repositories', $composer)) {
+            foreach ($composer['repositories'] as $repository) {
+                if ($repository['type'] === 'path' && isset($repository['url'])) {
+                    $directory = str_replace('/*', '', $repository['url']);
+                    $this->tasks[] = $this->taskFilesystemStack()->mkdir($directory);
+                }
+            }
         }
 
         $json = json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
