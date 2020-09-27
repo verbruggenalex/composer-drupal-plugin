@@ -35,3 +35,7 @@ jobs:
     - name: Initialize a Drupal composer.json
       run: |
         docker-compose exec -T -w ${PWD}/build web ../vendor/bin/robo drupal:extend --name="verbruggenalex/project" --description="Test project" -n
+
+    - name: Test installing composer.json
+      run: |
+        docker-compose exec -T -w ${PWD}/build -e COMPOSER_MEMORY_LIMIT=-1 web composer install
