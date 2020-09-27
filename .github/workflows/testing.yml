@@ -39,3 +39,7 @@ jobs:
     - name: Test installing composer.json
       run: |
         docker-compose exec -T -w ${PWD}/build -e COMPOSER_MEMORY_LIMIT=-1 web composer install --no-progress --no-suggest --ansi
+
+    - name: Test installing Drupal
+      run: |
+        docker-compose exec -T -w ${PWD}/build web ./vendor/bin/drush si --db-url=mysql://root:@mysql:3306/drupal standard -y

@@ -5,4 +5,4 @@ developers in:
 
 - creation, maintenance and installations of Drupal projects
 - providing default settings and files for Composer packages
-- 
+- generating an installation profile

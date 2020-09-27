@@ -9,6 +9,10 @@
     "drupal": {
       "type": "composer",
       "url": "https://packages.drupal.org/8"
+    },
+    "local": {
+      "type": "path",
+      "url": "lib/*"
     }
   },
   "conflict": {

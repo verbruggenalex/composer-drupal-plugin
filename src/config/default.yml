@@ -15,6 +15,7 @@ list:
       - drupal/coder
       - drupal/console
       - drupal/devel
+      - drupal/devel_kint_extras
       - drupal/drupal-extension
   toolbar:
     require:
