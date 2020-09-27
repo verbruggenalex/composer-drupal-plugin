@@ -76,7 +76,7 @@ class DrupalComposerCommands extends \Robo\Tasks
         $question->setMultiselect(true);
 
         $selection = $this->getDialog()->ask($this->input, $this->output, $question);
-        $this->output->writeln('You have just selected: ' . implode(', ', $selection));
+        $this->output->writeln('You have just selected: ' . implode(', ', (array) $selection));
 
         foreach ($selection as $group) {
             foreach ($list[$group] as $requirementType => $requirements) {
