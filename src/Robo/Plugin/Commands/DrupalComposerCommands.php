@@ -1,341 +1,112 @@
 <?php
 
-namespace VerbruggenAlex\ComposerDrupalPlugin\Robo\Plugin\Commands;
+namespace VerbruggenAlex\RoboDrupal\Robo\Plugin\Commands;
 
-use PhpTaskman\Core\Robo\Plugin\Commands\AbstractCommands;
-use PhpTaskman\Core\Taskman;
-use PhpTaskman\CoreTasks\Plugin\Task\CollectionFactoryTask;
-use PhpTaskman\CoreTasks\Plugin\Task\ProcessTask;
+use Robo\Robo;
 use Robo\Common\ResourceExistenceChecker;
 use Robo\Contract\VerbosityThresholdInterface;
 use Symfony\Component\Console\Event\ConsoleCommandEvent;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Question\Question;
-use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 
-class DrupalComposerCommands extends AbstractCommands
+class DrupalComposerCommands extends \Robo\Tasks
 {
     use ResourceExistenceChecker;
-    use \Boedah\Robo\Task\Drush\loadTasks;
 
-    /** @var array */
+  /** @var array */
     private $gitConfig;
 
-    /** @var array $tasks */
+  /** @var array $tasks */
     protected $tasks = [];
 
-    /** @var string $composer */
+  /** @var string $composer */
     protected $composer;
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getConfigurationFile(): string
+    public function __construct()
     {
-        return __DIR__ . '/../../../config/commands/composer.yml';
+        Robo::loadConfiguration([__DIR__ . '/../../../config/default.yml']);
     }
 
-    public function getDefaultConfigurationFile(): string
-    {
-        return __DIR__ . '/../../../config/default.yml';
-    }
-
-    /**
-     * Set runtime configuration values.
-     *
-     * @param \Symfony\Component\Console\Event\ConsoleCommandEvent $event
-     *
-     * @hook command-event drupal:generate-folders
-     */
+  /**
+   * Set runtime configuration values.
+   *
+   * @param \Symfony\Component\Console\Event\ConsoleCommandEvent $event
+   *
+   * @hook command-event drupal:extend
+   */
     public function setRuntimeConfig(ConsoleCommandEvent $event)
     {
-        // Set the build type from path if it matches pattern below.
-        $build_type = preg_match('~/build/(dev|dist)/~', getcwd(), $match) ? $match[1] : '';
-        $this->getConfig()->set('build.type', $build_type);
-
-        // Set the branch
-        $build_branch = $this->taskExec('git rev-parse --abbrev-ref HEAD')
-         ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
-         ->run()
-         ->getMessage();
-        $this->getConfig()->set('build.branch', trim($build_branch));
+        $this->setGitConfig();
+        $this->setComposerExecutable();
     }
 
-    /**
-     * Generate Drupal settings.
-     *
-     * @param array $options
-     *   Command options.
-     *
-     * @return \Robo\Collection\CollectionBuilder
-     *   Collection builder.
-     *
-     * @command drupal:generate-settings
-     *
-     * @option drupal-root  The root directory for Drupal.
-     */
-    public function drupalGenerateSettings(array $options = [
-        'drupal-root' => InputOption::VALUE_OPTIONAL,
+  /**
+   * Extend the composer.json.
+   *
+   * @return \Robo\Collection\CollectionBuilder
+   *   Collection builder.
+   *
+   * @command drupal:extend
+   *
+   * @option name         The project name.
+   * @option description  The description of the project.
+   */
+    public function drupalExtend(/** @scrutinizer ignore-unused */ array $options = [
+      'name' =>  InputOption::VALUE_OPTIONAL,
+      'description' => InputOption::VALUE_OPTIONAL,
     ])
     {
-        $root = isset($options['drupal-root']) ? $options['drupal-root'] : $this->getConfig()->get('drupal.root');
-        $sites = $this->getConfig()->get('drupal.sites');
-        $append = "
-if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
-  include \$app_root . '/' . \$site_path . '/settings.override.php';
-}";
+        $list = Robo::Config()->get('list');
+        $libDir = __DIR__ . '/../../../../lib';
+        $composer = file_exists('composer.json') ? json_decode(file_get_contents('composer.json'), true) : [];
+        $composerReqs = [
+          'require' => [],
+          'require-dev' => [],
+        ];
 
-        foreach ($sites as $site => $location) {
-            $db_name = implode('_', array_filter([
-                $this->getConfig()->get('build.type'),
-                $site,
-                $this->getConfig()->get('build.branch'),
-            ]));
-            $this->getConfig()->set('drupal.database.name', $db_name);
-            $arguments = [
-                'from' => 'vendor/verbruggenalex/composer-drupal-plugin/src/resources/settings.php',
-                'to' => $root . '/sites/' . $site . '/settings.override.php',
-            ];
-            $this->task(ProcessTask::class)->setTaskArguments($arguments)->run();
-            $this->taskFilesystemStack()->copy(
-                getcwd() . '/' . $root . '/sites/default/default.settings.php',
-                getcwd() . '/' . $root . '/sites/' . $site . '/settings.php',
-                true
-            )->run();
-            $this->taskWriteToFile(getcwd() . '/' . $root . '/sites/' . $site . '/settings.php')
-              ->append()
-              ->lines([$append])
-              ->run();
-        }
-    }
+        $options = array_keys($list);
+        $question = new ChoiceQuestion(
+            'Please select the packages you want to install.',
+            $options,
+            implode(',', array_keys($options)),
+        );
+        $question->setMultiselect(true);
 
-    /**
-     * Generate Drupal folders.
-     *
-     * @param array $options
-     *   Command options.
-     *
-     * @return \Robo\Collection\CollectionBuilder
-     *   Collection builder.
-     *
-     * @command drupal:generate-folders
-     *
-     * @option drupal-root  The root directory for Drupal.
-     */
-    public function drupalGenerateFolders(array $options = [
-        'drupal-root' => InputOption::VALUE_OPTIONAL,
-    ])
-    {
-        $root = isset($options['drupal-root']) ? $options['drupal-root'] : $this->getConfig()->get('drupal.root');
-        $files = $this->getConfig()->get('drupal.files');
-        $sites = $this->getConfig()->get('drupal.sites');
+        $selection = $this->getDialog()->ask($this->input, $this->output, $question);
+        $this->output->writeln('You have just selected: ' . implode(', ', (array) $selection));
 
-        $folders = ['public', 'private', 'temp', 'translations'];
-        $filesystem = new Filesystem();
-        $filesystem->mkdir(getcwd() . '/config');
-        foreach ($sites as $site => $location) {
-            foreach ($folders as $folder) {
-                $fullPath = $files . '/' . $site . '/files/' . $folder;
-                $fullPathWeb = getcwd() . '/' . $root . '/sites/' . $site . '/files/' . $folder;
-                $filesystem->mkdir($fullPath, 0700);
-                if ($folder === 'public') {
-                    $filesystem->symlink($fullPath, $fullPathWeb);
+        foreach ($selection as $group) {
+            foreach ($list[$group] as $requirementType => $requirements) {
+                $composerReqs[$requirementType] = array_merge($composerReqs[$requirementType], $requirements);
+                foreach ($requirements as $requirement) {
+                    $packagePath = str_replace(':', '/', $requirement);
+                    $composerJson = $libDir . '/' . $packagePath . '/composer.json';
+                    if (file_exists($composerJson)) {
+                        $composerJsonArray = json_decode(file_get_contents($composerJson), true);
+                        $composer = $this->arrayMergeRecursiveDistinct($composer, $composerJsonArray);
+                    }
                 }
             }
         }
-        $this->drupalGenerateSettings($options);
-    }
 
-    /**
-     * Create a Drupal composer.json.
-     *
-     * @param array $options
-     *   Command options.
-     *
-     * @return \Robo\Collection\CollectionBuilder
-     *   Collection builder.
-     *
-     * @command drupal:init
-     *
-     * @option name         The project name.
-     * @option description  The description of the project.
-     * @option author       The author of the project.
-     * @option drupal-root  The root directory for Drupal.
-     */
-    public function drupalInit(/** @scrutinizer ignore-unused */ array $options = [
-        'name' =>  InputOption::VALUE_OPTIONAL,
-        'description' => InputOption::VALUE_OPTIONAL,
-        'author' => InputOption::VALUE_OPTIONAL,
-        'drupal-root' => InputOption::VALUE_OPTIONAL,
-    ])
-    {
-        $this->createComposerJson();
-        $this->setComposerExecutable();
-        $this->transformComposerJson();
-        // $this->normalizeComposerJson();
-        $this->composerRequireDrupal();
+        $this->updateComposerJson($composer);
+        $this->tasks[] = $this->taskExecStack()
+        ->stopOnFail()
+          ->executable($this->composer)
+          ->exec('require ' . implode(' ', $composerReqs['require']) . ' --no-update --ansi')
+          ->exec('require ' . implode(' ', $composerReqs['require-dev']) . ' --dev --no-update --ansi');
+
         if ($this->tasks !== []) {
             return $this
-                ->collectionBuilder()
-                ->addTaskList($this->tasks);
+            ->collectionBuilder()
+            ->addTaskList($this->tasks);
         }
     }
 
-    /**
-     * Build a development codebase.
-     *
-     * @param array $options
-     *   Command options.
-     *
-     * @return \Robo\Collection\CollectionBuilder
-     *   Collection builder.
-     *
-     * @command drupal:build-dev
-     *
-     * @option branch       The branch name.
-     */
-    public function drupalBuildDev(array $options = [
-        'branch' =>  InputOption::VALUE_OPTIONAL,
-    ])
-    {
-        $branch = $this->taskExec('git rev-parse --abbrev-ref HEAD')
-         ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
-         ->run()
-         ->getMessage();
-
-        $branch = isset($options['branch']) ? $options['branch'] : trim($branch);
-        $buildPath = "build/dev/$branch";
-        $this->_exec("mkdir -p $buildPath");
-        $this->taskRsync()
-          ->fromPath('./')
-          ->toPath($buildPath)
-          ->filter(':- .gitignore')
-          ->recursive()
-          ->run();
-        $this->taskComposerInstall()
-          ->workingDir($buildPath)
-          ->run();
-        $this->taskExec('./vendor/bin/drush site-install standard -y -r web --account-pass=admin')
-          ->dir($buildPath)
-          ->run();
-    }
-
-    /**
-     * Deploy from one build to another.
-     *
-     * @param array $options
-     *   Command options.
-     *
-     * @return \Robo\Collection\CollectionBuilder
-     *   Collection builder.
-     *
-     * @command deploy:build
-     *
-     * @option from     The path from which you want to deploy.
-     * @option to       The path to which you want to deploy.
-     */
-    public function deployBuild(array $options = [
-        'from' =>  InputOption::VALUE_REQUIRED,
-        'to' =>  InputOption::VALUE_REQUIRED,
-    ])
-    {
-        $from = $options['from'];
-        $to = $options['to'];
-        $drush = './vendor/bin/drush';
-        $dumpfile = getcwd() . '/dump.sql';
-
-        // @TODO: Validation of the presence of both paths.
-
-        // @TODO: Validation on site status of from.
-        $this->taskExecStack()
-            ->stopOnFail()
-            ->dir($from)
-            ->exec("$drush sql-dump --result-file=$dumpfile")
-            ->dir($to)
-            ->exec("$drush sql-create -y")
-            ->exec("$drush sql-drop -y")
-            ->exec("$drush sql-cli < $dumpfile")
-            ->exec("./vendor/bin/taskman build:deploy")
-            ->run();
-    }
-
-    protected function setAuthor()
-    {
-        $git = $this->getGitConfig();
-        if (null === $author = $this->input()->getOption('author')) {
-            if (!empty($_SERVER['COMPOSER_DEFAULT_AUTHOR'])) {
-                $author_name = $_SERVER['COMPOSER_DEFAULT_AUTHOR'];
-            } elseif (isset($git['user.name'])) {
-                $author_name = $git['user.name'];
-            }
-
-            if (!empty($_SERVER['COMPOSER_DEFAULT_EMAIL'])) {
-                $author_email = $_SERVER['COMPOSER_DEFAULT_EMAIL'];
-            } elseif (isset($git['user.email'])) {
-                $author_email = $git['user.email'];
-            }
-
-            if (isset($author_name) && isset($author_email)) {
-                $author = sprintf('%s <%s>', $author_name, $author_email);
-            }
-        }
-
-        $self = $this;
-        $question = new Question('Author [<comment>'.$author.'</comment>, n to skip]: ');
-        $question->setValidator(function ($value) use ($self, $author) {
-            if ($value === 'n' || $value === 'no') {
-                return;
-            }
-                $value = (string) $value ?: $author;
-                $author = $self->parseAuthorString($value);
-
-                return sprintf('%s <%s>', $author['name'], $author['email']);
-        });
-
-        $author = $this->getDialog()->ask($this->input(), $this->output(), $question);
-        $this->input()->setOption('author', $author);
-    }
-
-    /**
-     * @private
-     * @param  string $author
-     * @return array
-     */
-    public function parseAuthorString($author)
-    {
-        if (preg_match('/^(?P<name>[- .,\p{L}\p{N}\p{Mn}\'’"()]+) <(?P<email>.+?)>$/u', $author, $match)) {
-            if ($this->isValidEmail($match['email'])) {
-                return array(
-                    'name' => trim($match['name']),
-                    'email' => $match['email'],
-                );
-            }
-        }
-
-        throw new \InvalidArgumentException(
-            'Invalid author string.  Must be in the format: '.
-            'John Smith <john@example.com>'
-        );
-    }
-
-    protected function isValidEmail($email)
-    {
-        // assume it's valid if we can't validate it
-        if (!function_exists('filter_var')) {
-            return true;
-        }
-
-        // php <5.3.3 has a very broken email validator, so bypass checks
-        if (PHP_VERSION_ID < 50303) {
-            return true;
-        }
-
-        return false !== filter_var($email, FILTER_VALIDATE_EMAIL);
-    }
-
-    protected function getGitConfig()
+    protected function setGitConfig()
     {
         if (null !== $this->gitConfig) {
             return $this->gitConfig;
@@ -343,13 +114,7 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
 
         $finder = new ExecutableFinder();
         $gitBin = $finder->find('git');
-
-        // TODO in v3 always call with an array
-        if (method_exists('Symfony\Component\Process\Process', 'fromShellCommandline')) {
-            $cmd = new Process(array($gitBin, 'config', '-l'));
-        } else {
-            $cmd = new Process(sprintf('%s config -l', ProcessExecutor::escape($gitBin)));
-        }
+        $cmd = new Process(array($gitBin, 'config', '-l'));
         $cmd->run();
 
         if ($cmd->isSuccessful()) {
@@ -367,22 +132,24 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
 
     protected function setDescription()
     {
-        $description = $this->input()->getOption('description') ?: false;
-        $description = $this->getDialog()->ask(
-            $this->input(),
-            $this->output(),
-            new Question(
-                'Description [<comment>'.(string) $description.'</comment>]: ',
-                $description
-            )
-        );
-        $this->input()->setOption('description', $description);
+        if (!$description = $this->input()->getOption('description') ?: false) {
+            $description = $this->getDialog()->ask(
+                $this->input(),
+                $this->output(),
+                new Question(
+                    'Description [<comment>' . (string) $description . '</comment>]: ',
+                    $description
+                )
+            );
+            $this->input()->setOption('description', $description);
+        }
+
+        return $description;
     }
 
     protected function setName()
     {
         $cwd = realpath(".");
-        $git = $this->getGitConfig();
 
         if (!$name = $this->input()->getOption('name')) {
             $name = basename($cwd);
@@ -390,8 +157,8 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
             $name = strtolower($name);
             if (!empty($_SERVER['COMPOSER_DEFAULT_VENDOR'])) {
                 $name = $_SERVER['COMPOSER_DEFAULT_VENDOR'] . '/' . $name;
-            } elseif (isset($git['github.user'])) {
-                $name = $git['github.user'] . '/' . $name;
+            } elseif (isset($this->gitConfig['github.user'])) {
+                $name = $this->gitConfig['github.user'] . '/' . $name;
             } elseif (!empty($_SERVER['USERNAME'])) {
                 $name = $_SERVER['USERNAME'] . '/' . $name;
             } elseif (!empty($_SERVER['USER'])) {
@@ -399,7 +166,7 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
             } elseif (get_current_user()) {
                 $name = get_current_user() . '/' . $name;
             } else {
-                // package names must be in the format foo/bar
+              // package names must be in the format foo/bar
                 $name .= '/' . $name;
             }
             $name = strtolower($name);
@@ -410,104 +177,64 @@ if (file_exists(\$app_root . '/' . \$site_path . '/settings.override.php')) {
                     if (null === $value) {
                         return $name;
                     }
-
-                    if (!preg_match('{^[a-z0-9_.-]+/[a-z0-9_.-]+$}D', $value)) {
-                        throw new \InvalidArgumentException(
-                            'The package name ' . (string) $value . ' is invalid,
-                            it should be lowercase and have a vendor name, a
-                            forward slash, and a package name, matching:
-                            [a-z0-9_.-]+/[a-z0-9_.-]+'
-                        );
-                    }
+                    $this->validateName($value);
 
                     return $value;
                 }
             );
             $name = $this->getDialog()->ask($this->input(), $this->output(), $question);
         } else {
-            if (!preg_match('{^[a-z0-9_.-]+/[a-z0-9_.-]+$}D', $name)) {
-                throw new \InvalidArgumentException(
-                    'The package name '.$name.' is invalid, it should be lowercase and have a vendor name, a forward slash, and a package name, matching: [a-z0-9_.-]+/[a-z0-9_.-]+'
-                );
-            }
+            $this->validateName($name);
         }
         $this->input()->setOption('name', $name);
+
+        return $name;
     }
 
-    public function createComposerJson()
+    protected function validateName($name)
     {
-        $this->setName();
-        $this->setDescription();
-        $this->setAuthor();
-
-        $composer = [
-            'name' => $this->input()->getOption('name'),
-            'description' => $this->input()->getOption('description'),
-        ];
-
-        if (!file_exists('composer.json')) {
-            $json = json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-            file_put_contents('composer.json', $json);
+        if (!preg_match('{^[a-z0-9_.-]+/[a-z0-9_.-]+$}D', $name)) {
+            throw new \InvalidArgumentException(
+            // phpcs:ignore Generic.Files.LineLength.TooLong
+                'The package name ' . (string) $name . ' is invalid, it should be lowercase and have a vendor name, a forward slash, and a package name, matching: [a-z0-9_.-]+/[a-z0-9_.-]+'
+            );
         }
+    }
+
+    public function updateComposerJson($composer)
+    {
+        // Set project name if it is not set yet.
+        if (!array_key_exists('name', $composer)) {
+            $composer['name'] = $this->setName();
+        }
+
+        // Set project description if it is not set yet.
+        if (!array_key_exists('description', $composer)) {
+            $composer['description'] = $this->setDescription();
+        }
+
+        // Check if we need to create directories for local repository paths.
+        if (array_key_exists('repositories', $composer)) {
+            foreach ($composer['repositories'] as $repository) {
+                if ($repository['type'] === 'path' && isset($repository['url'])) {
+                    $directory = str_replace('/*', '', $repository['url']);
+                    $this->tasks[] = $this->taskFilesystemStack()->mkdir($directory);
+                }
+            }
+        }
+
+        $json = json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        file_put_contents('composer.json', $json);
     }
 
     protected function setComposerExecutable()
     {
-        // Find Composer
         $composer = $this->taskExec('which composer')
-         ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
-         ->run()
-         ->getMessage();
-
+        ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
+        ->run()
+        ->getMessage();
         $this->composer = trim($composer);
     }
-
-    protected function composerRequireDrupal()
-    {
-        // Update the composer.json with drupal requirements and run update.
-        $require = [
-            'composer/installers',
-            'drupal/core',
-            'drupal/core-composer-scaffold',
-            'drush/drush',
-        ];
-        $requireDev = [
-            'drupal-composer/drupal-security-advisories:dev-8.x-v2',
-            'drupal/core-dev',
-            'ergebnis/composer-normalize',
-        ];
-        $this->tasks[] = $this->taskExecStack()
-          ->stopOnFail()
-          ->executable($this->composer)
-          ->exec('require ' . implode(' ', $require) . ' --no-update')
-          ->exec('require ' . implode(' ', $requireDev) . ' --dev --no-update')
-        //   ->exec('normalize --no-update-lock')
-          ->exec('install');
-    }
-
-    protected function transformComposerJson()
-    {
-        $this->checkResource('composer.json', 'file');
-        $composerFile = \realpath('composer.json');
-        $composerArray = json_decode(file_get_contents($composerFile), true);
-        $config = $this->getConfig()->get('composer.drupal');
-        $newComposerArray = $this->arrayMergeRecursiveDistinct($composerArray, $config);
-        file_put_contents($composerFile, json_encode($newComposerArray, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-    }
-
-    // protected function normalizeComposerJson() {
-    //     // First remove composer.lock silently because normalize will trip that
-    //     // the lock file is out of date.
-    //     $this->taskExec("rm -f composer.lock")
-    //       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
-    //       ->run();
-    //     // Install and execute composer normalize
-    //     $this->tasks[] = $this->taskExecStack()
-    //      ->stopOnFail()
-    //      ->executable($this->composer)
-    //      ->exec('global require ergebnis/composer-normalize --quiet')
-    //      ->exec('normalize --quiet');
-    // }
 
     protected function arrayMergeRecursiveDistinct()
     {

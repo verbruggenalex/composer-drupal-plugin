@@ -1,0 +1,21 @@
+{
+  "type": "project",
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "config": {
+    "sort-packages": true
+  },
+  "repositories": {
+    "drupal": {
+      "type": "composer",
+      "url": "https://packages.drupal.org/8"
+    },
+    "local": {
+      "type": "path",
+      "url": "lib/composer/*"
+    }
+  },
+  "conflict": {
+    "drupal/drupal": "*"
+  }
+}

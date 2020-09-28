@@ -2,9 +2,7 @@ name: Testing repository
 
 on:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    branches: [ '**' ]
 
 jobs:
   build:
@@ -21,14 +19,14 @@ jobs:
         docker-compose up -d
         sleep 30
 
-    # - name: Composer cache
-    #   id: composer-cache
-    #   uses: actions/cache@v2
-    #   with:
-    #     path: vendor
-    #     key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
-    #     restore-keys: |
-    #       ${{ runner.os }}-php-
+    - name: Composer cache
+      id: composer-cache
+      uses: actions/cache@v2
+      with:
+        path: vendor
+        key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-
 
     - name: Composer install
       run: |
@@ -36,4 +34,12 @@ jobs:
 
     - name: Initialize a Drupal composer.json
       run: |
-        docker-compose exec -T -w ${PWD}/build web ../vendor/bin/taskman drupal:init --name="verbruggenalex/project" --description="Test project" --author="Alex Verbruggen <verbruggenalex@gmail.com>" -n
+        docker-compose exec -T -w ${PWD}/build web ../vendor/bin/robo drupal:extend --name="verbruggenalex/project" --description="Test project" -n
+
+    - name: Test installing composer.json
+      run: |
+        docker-compose exec -T -w ${PWD}/build -e COMPOSER_MEMORY_LIMIT=-1 web composer install --no-progress --no-suggest --ansi
+
+    - name: Test installing Drupal
+      run: |
+        docker-compose exec -T -w ${PWD}/build web ./vendor/bin/drush si --db-url=mysql://root:@mysql:3306/drupal standard -y

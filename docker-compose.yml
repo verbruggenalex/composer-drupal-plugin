@@ -18,19 +18,17 @@ services:
       - ${PWD}:${PWD}
       - ~/.ssh:/home/docker/.ssh
       - ~/.composer:/home/docker/.composer
-#    depends_on:
-#      - mysql
     ports:
       - 81:80
       - 3000:3000
 # ==============================================================================
-#  mysql:
-#    image: mysql:5.7
-#    environment:
-#      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
-#      - MYSQL_DATABASE=drupal
-#    volumes:
-#      - mysql:/var/lib/mysql
+  mysql:
+    image: mysql:5.7
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+      - MYSQL_DATABASE=drupal
+    volumes:
+      - mysql:/var/lib/mysql
 # ==============================================================================
 #  selenium:
 #    image: selenium/standalone-chrome
@@ -49,5 +47,5 @@ services:
 #        - BLACKFIRE_SERVER_ID
 #        - BLACKFIRE_SERVER_TOKEN
 # ==============================================================================
-#volumes:
-#  mysql:
+volumes:
+  mysql:
