@@ -12,7 +12,7 @@
     },
     "local": {
       "type": "path",
-      "url": "lib/*"
+      "url": "lib/composer/*"
     }
   },
   "conflict": {
