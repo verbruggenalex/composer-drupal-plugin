@@ -13,6 +13,7 @@ list:
   devel:
     require-dev:
       - drupal/coder
+      - dealerdirect/phpcodesniffer-composer-installer
       - drupal/console
       - drupal/devel
       - drupal/devel_kint_extras

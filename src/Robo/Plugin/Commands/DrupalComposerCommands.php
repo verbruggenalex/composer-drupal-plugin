@@ -83,10 +83,18 @@ class DrupalComposerCommands extends \Robo\Tasks
                 $composerReqs[$requirementType] = array_merge($composerReqs[$requirementType], $requirements);
                 foreach ($requirements as $requirement) {
                     $packagePath = str_replace(':', '/', $requirement);
-                    $composerJson = $libDir . '/' . $packagePath . '/composer.json';
-                    if (file_exists($composerJson)) {
-                        $composerJsonArray = json_decode(file_get_contents($composerJson), true);
-                        $composer = $this->arrayMergeRecursiveDistinct($composer, $composerJsonArray);
+                    $libPackagePath = $libDir . '/' . $packagePath;
+                    if (file_exists($libPackagePath)) {
+                      // Copy all files except composer.json to the current folder.
+                      $this->tasks[] = $this->taskCopyDir([$libDir . '/' . $packagePath => '.'])
+                          ->exclude(['composer.json'])
+                          ->overwrite(false);
+                      $composerJson = $libPackagePath . '/composer.json';
+                      // Update composer json array.
+                      if (file_exists($composerJson)) {
+                          $composerJsonArray = json_decode(file_get_contents($composerJson), true);
+                          $composer = $this->arrayMergeRecursiveDistinct($composer, $composerJsonArray);
+                      }
                     }
                 }
             }
@@ -211,16 +219,6 @@ class DrupalComposerCommands extends \Robo\Tasks
         // Set project description if it is not set yet.
         if (!array_key_exists('description', $composer)) {
             $composer['description'] = $this->setDescription();
-        }
-
-        // Check if we need to create directories for local repository paths.
-        if (array_key_exists('repositories', $composer)) {
-            foreach ($composer['repositories'] as $repository) {
-                if ($repository['type'] === 'path' && isset($repository['url'])) {
-                    $directory = str_replace('/*', '', $repository['url']);
-                    $this->tasks[] = $this->taskFilesystemStack()->mkdir($directory);
-                }
-            }
         }
 
         $json = json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
