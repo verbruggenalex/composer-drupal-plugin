@@ -32,6 +32,10 @@ jobs:
       run: |
         docker-compose exec -T web composer install --prefer-dist --no-progress --no-suggest --ansi
 
+    - name: Check coding standards
+      run: |
+        docker-compose exec -T web composer check-coding-standards
+
     - name: Initialize a Drupal composer.json
       run: |
         docker-compose exec -T -w ${PWD}/build web ../vendor/bin/robo drupal:extend --name="verbruggenalex/project" --description="Test project" -n

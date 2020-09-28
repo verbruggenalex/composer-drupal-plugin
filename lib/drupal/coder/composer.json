@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "check-coding-standards": "./vendor/bin/phpcs"
+  }
+}

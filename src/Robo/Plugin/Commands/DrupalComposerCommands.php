@@ -86,15 +86,15 @@ class DrupalComposerCommands extends \Robo\Tasks
                     $libPackagePath = $libDir . '/' . $packagePath;
                     if (file_exists($libPackagePath)) {
                       // Copy all files except composer.json to the current folder.
-                      $this->tasks[] = $this->taskCopyDir([$libDir . '/' . $packagePath => '.'])
+                        $this->tasks[] = $this->taskCopyDir([$libDir . '/' . $packagePath => '.'])
                           ->exclude(['composer.json'])
                           ->overwrite(false);
-                      $composerJson = $libPackagePath . '/composer.json';
+                        $composerJson = $libPackagePath . '/composer.json';
                       // Update composer json array.
-                      if (file_exists($composerJson)) {
-                          $composerJsonArray = json_decode(file_get_contents($composerJson), true);
-                          $composer = $this->arrayMergeRecursiveDistinct($composer, $composerJsonArray);
-                      }
+                        if (file_exists($composerJson)) {
+                            $composerJsonArray = json_decode(file_get_contents($composerJson), true);
+                            $composer = $this->arrayMergeRecursiveDistinct($composer, $composerJsonArray);
+                        }
                     }
                 }
             }
