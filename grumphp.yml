@@ -1,5 +1,7 @@
 grumphp:
-    ascii: ~
+    ascii:
+        failed: ~
+        succeeded: ~
     parallel:
         enabled: true
         max_workers: 32
