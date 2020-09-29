@@ -30,8 +30,8 @@ services:
     volumes:
       - mysql:/var/lib/mysql
 # ==============================================================================
-#  selenium:
-#    image: selenium/standalone-chrome
+  selenium:
+    image: selenium/standalone-chrome
 # ==============================================================================
 #  backstop:
 #    image: backstopjs/backstopjs

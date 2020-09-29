@@ -44,6 +44,14 @@ jobs:
       run: |
         docker-compose exec -T -w ${PWD}/build -e COMPOSER_MEMORY_LIMIT=-1 web composer install --no-progress --no-suggest --ansi
 
+    - name: Run phpcs on build folder.
+      run: |
+        docker-compose exec -T -w ${PWD}/build web composer check-coding-standards
+
     - name: Test installing Drupal
       run: |
         docker-compose exec -T -w ${PWD}/build web ./vendor/bin/drush si --db-url=mysql://root:@mysql:3306/drupal standard -y
+
+    - name: Run behat tests on Drupal installation
+      run: |
+        docker-compose exec -T -w ${PWD}/build web composer test-behat
