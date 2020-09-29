@@ -33,9 +33,9 @@ jobs:
       run: |
         docker-compose exec -T web composer install --prefer-dist --no-progress --no-suggest --ansi
 
-    - name: Check coding standards
+    - name: Static code check
       run: |
-        docker-compose exec -T web ./vendor/bin/phpcs
+        docker-compose exec -T web ./vendor/bin/grumphp run
 
     - name: Initialize a Drupal composer.json
       run: |
@@ -61,7 +61,8 @@ jobs:
       run: |
         docker-compose exec -T -w ${PWD}/build web composer test-behat
 
-    - name: Compress build folder.
+    # The following steps are only executed on the tag event.
+    - name: Compress build folder
       if: startsWith(github.ref, 'refs/tags/')
       run: |
         tar -czvf build.tar.gz build/
