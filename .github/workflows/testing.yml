@@ -34,7 +34,7 @@ jobs:
 
     - name: Check coding standards
       run: |
-        docker-compose exec -T web composer test-phpcs
+        docker-compose exec -T web ./vendor/bin/phpcs
 
     - name: Initialize a Drupal composer.json
       run: |

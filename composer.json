@@ -24,8 +24,5 @@
     "psr-4": {
       "VerbruggenAlex\\RoboDrupal\\": "src/"
     }
-  },
-  "scripts": {
-    "test-phpcs": "./vendor/bin/phpcs"
   }
 }
