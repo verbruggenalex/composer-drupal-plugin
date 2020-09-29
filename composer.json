@@ -9,9 +9,8 @@
     }
   ],
   "require": {
-    "php": ">=7.2.5",
+    "php": ">=7.3",
     "consolidation/robo": "^2.2",
-    "cweagans/composer-patches": "^1.6",
     "symfony/yaml": "^5.1"
   },
   "require-dev": {
@@ -22,13 +21,6 @@
   },
   "config": {
     "sort-packages": true
-  },
-  "extra": {
-    "patches": {
-      "phpro/grumphp": [
-        "https://patch-diff.githubusercontent.com/raw/phpro/grumphp/pull/818.patch"
-      ]
-    }
   },
   "autoload": {
     "psr-4": {
