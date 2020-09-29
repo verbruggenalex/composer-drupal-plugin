@@ -2,9 +2,6 @@ grumphp:
     ascii:
         failed: ~
         succeeded: ~
-    parallel:
-        enabled: true
-        max_workers: 32
     tasks:
         composer: ~
         composer_normalize: ~
