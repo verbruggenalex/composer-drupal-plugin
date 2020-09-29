@@ -1,5 +1,5 @@
 {
   "scripts": {
-    "check-coding-standards": "./vendor/bin/phpcs"
+    "test-phpcs": "./vendor/bin/phpcs"
   }
 }
