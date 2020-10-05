@@ -39,27 +39,27 @@ jobs:
 
     - name: Initialize a Drupal composer.json
       run: |
-        docker-compose exec -T -w ${PWD}/build web ../vendor/bin/robo drupal:extend --name="verbruggenalex/project" --description="Test project" -n
+        docker-compose exec -T -w /home/project/build web ../vendor/bin/robo drupal:extend --name="verbruggenalex/project" --description="Test project" -n
 
     - name: Test installing composer.json
       run: |
-        docker-compose exec -T -w ${PWD}/build -e COMPOSER_MEMORY_LIMIT=-1 web composer install --no-progress --no-suggest --ansi
+        docker-compose exec -T -w /home/project/build -e COMPOSER_MEMORY_LIMIT=-1 web composer install --no-progress --no-suggest --ansi
 
     - name: Normalize composer.json
       run: |
-        docker-compose exec -T -w ${PWD}/build web composer normalize --no-check-lock --no-update-lock --ansi
+        docker-compose exec -T -w /home/project/build web composer normalize --no-check-lock --no-update-lock --ansi
 
     - name: Run phpcs on build folder.
       run: |
-        docker-compose exec -T -w ${PWD}/build web composer test-phpcs
+        docker-compose exec -T -w /home/project/build web composer test-phpcs
 
     - name: Test installing Drupal
       run: |
-        docker-compose exec -T -w ${PWD}/build web ./vendor/bin/drush si --db-url=mysql://root:@mysql:3306/drupal standard -y
+        docker-compose exec -T -w /home/project/build web ./vendor/bin/drush si --db-url=mysql://root:@mysql:3306/drupal standard -y
 
     - name: Run behat tests on Drupal installation
       run: |
-        docker-compose exec -T -w ${PWD}/build web composer test-behat
+        docker-compose exec -T -w /home/project/build web composer test-behat
 
     # The following steps are only executed on the tag event.
     - name: Compress build folder
